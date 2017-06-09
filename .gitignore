@@ -1,0 +1,16 @@
+# make git to ingore the following files
+
+*.mp4
+*.ts
+*.yuv
+*.mat
+*.nb
+*.fig
+*.264
+*.jpg
+*.bmp
+*.asv
+*.bak
+*.png
+*.jpeg
+
