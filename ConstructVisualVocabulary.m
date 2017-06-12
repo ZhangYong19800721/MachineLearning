@@ -3,9 +3,11 @@ function VV = ConstructVisualVocabulary(K,SURF)
 %   K, 视觉词汇表的大小
 %   SURF, SURF特征数据集，每一列是一个64维的SURF特征向量。
 %   VV，Visual Vocabulary，视觉词汇表，每一列表示一个64维视觉词汇，共K列
+    message = 'constructing visual vocabulary ...'; disp(message);
 
     object_value = inf;
-    for n = 1:10
+    for n = 1:5
+        message = n
         [center, label] = Cluster.KMeansPlusPlus(SURF,K);
         
         sum_dis = zeros(1,K);
