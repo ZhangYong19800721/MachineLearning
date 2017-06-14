@@ -6,7 +6,7 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
 % points,数据样本点（训练数据）
 % center_points, 经过训练后得到的中心点
 % points_labels, 所有的训练数据加标签后的结果
-    message = 'kmeans++ ...'; disp(message);
+    message = 'kmeans++ ...'
 
     [~, N]=size(points);  %D是数据维数，N是样本点个数
 
@@ -15,10 +15,10 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
     center_points = points(:,center_points_idx); % 初始化第1个中心点
     distance_matrix = inf(K,N);
     while length(center_points_idx) < K
-        C = length(center_points_idx);
-        center_point_c = repmat(center_points(:,C),1,N);
+        c = length(center_points_idx)
+        center_point_c = repmat(center_points(:,c),1,N);
         delta = points - center_point_c;
-        distance_matrix(C,:) = sum(delta.^2);
+        distance_matrix(c,:) = sum(delta.^2);
      
         min_distance_matrix = min(distance_matrix);
         prob = min_distance_matrix ./ sum(min_distance_matrix);
@@ -47,7 +47,7 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
             center_points(:,k) = sum(points(:,min_idx == k),2) / sum(min_idx == k);
         end
         
-        norm_value = norm(old_center_points - center_points); disp(norm_value);
+        norm_value = norm(old_center_points - center_points)
         if norm_value <= 0.001
             parfor k = 1:K
                 center_point_k = repmat(center_points(:,k),1,N);

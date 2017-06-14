@@ -7,11 +7,13 @@ function SURF = ConstructSurfData(image_base_dir,file_type)
     SURF = [];
     
     for n = 1:N
-        message = n
+        read_image_file_number = n
         image_rgb = imread(strcat(image_base_dir,files(n).name));
         image_yuv = rgb2ycbcr(image_rgb);
-        points = detectSURFFeatures(image_yuv(:,:,1));
-        [features,valid_points] = extractFeatures(image_yuv(:,:,1),points.selectStrongest(450));
+        [~,width] = size(image_yuv(:,:,1));
+        image_scale_down = imresize(image_yuv(:,:,1),320/width);
+        points = detectSURFFeatures(image_scale_down);
+        [features,~] = extractFeatures(image_scale_down,points.selectStrongest(450));
         SURF = [SURF features'];
     end
 end
