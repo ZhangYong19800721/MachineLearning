@@ -16,7 +16,7 @@ function SURF = ConstructSurfData_Color(image_base_dir,file_type)
         points_V = detectSURFFeatures(image_yuv(:,:,3));
         [features_U,~] = extractFeatures(image_yuv(:,:,2),points_U.selectStrongest(450));
         [features_V,~] = extractFeatures(image_yuv(:,:,3),points_V.selectStrongest(450));
-        SURF = [SURF features_U'features_V'];
+        SURF = [SURF features_U' features_V'];
     end
 end
 
