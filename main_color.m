@@ -5,4 +5,4 @@ format compact;
 SURF = ConstructSurfData_Color('D:\imagebase\','*.jpg');
 VisualVocabulary_UV = ConstructVisualVocabulary(124,SURF,5);
 
-save('VisualVocabulary_UV.mat',VisualVocabulary_UV);
+save('VisualVocabulary_UV.mat','VisualVocabulary_UV');

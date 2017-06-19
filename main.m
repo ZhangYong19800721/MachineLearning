@@ -5,4 +5,4 @@ format compact;
 SURF = ConstructSurfData('D:\imagebase\','*.jpg');
 VisualVocabulary_Y = ConstructVisualVocabulary(2048,SURF,5);
 
-save('VisualVocabulary_Y.mat',VisualVocabulary_Y);
+save('VisualVocabulary_Y.mat','VisualVocabulary_Y');
