@@ -3,7 +3,6 @@
 *.mp4
 *.ts
 *.yuv
-*.mat
 *.nb
 *.fig
 *.264
@@ -13,4 +12,5 @@
 *.bak
 *.png
 *.jpeg
+*.mat
 
