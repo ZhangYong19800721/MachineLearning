@@ -54,7 +54,7 @@ classdef RestrictedBoltzmannMachine
             ob = ML.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
-            v_weight      = zeros(size(obj.weight));
+            v_weight = zeros(size(obj.weight));
             v_h_bias = zeros(size(obj.hidden_bias));
             v_v_bias = zeros(size(obj.visual_bias));
             
@@ -104,9 +104,6 @@ classdef RestrictedBoltzmannMachine
                 obj.visual_bias = obj.visual_bias + v_v_bias;
             end
         end
-        
-        [example, obj] = generate(obj) % 让RBM产生1个样本
-        obj = gibbs_sample(obj,times) % Gibbs抽样
         
         function h_state = posterior_sample(obj,v_state)
             % posterior_sample 计算后验概率采样

@@ -24,12 +24,46 @@ classdef StackedRestrictedBoltzmannMachine
             end
         end
         
+        function [t_state,state] = posterior_sample(obj,v_state)
+            % posterior_sample 给定显层神经元的状态，计算顶层隐藏神经元的状态
+            state{1}.v_field = v_state;
+            state{1}.v_state = v_state;
+            
+            for layer_idx = 1:length(obj.rbm_layers)
+                state{layer_idx}.h_field = obj.rbm_layers{layer_idx}.posterior(state{layer_idx}.v_state);
+                state{layer_idx}.h_state = ML.sample(state{layer_idx}.h_field);
+                if layer_idx < length(obj.rbm_layers)
+                    state{layer_idx+1}.v_field = state{layer_idx}.h_field;
+                    state{layer_idx+1}.v_state = state{layer_idx}.h_state;
+                end
+            end
+            
+            t_state = state{length(obj.rbm_layers)}.h_state;
+        end
+        
         function v_field = likelihood(obj,h_state)
             % likelihood 给定顶层隐神经元的取值，计算底层显神经元的域值
             v_field = h_state;
             for layer_idx = length(obj.rbm_layers):-1:1
                 v_field = obj.rbm_layers{layer_idx}.likelihood(v_field);
             end
+        end
+        
+        function [b_state,state] = likelihood_sample(obj,h_state)
+            % likelihood_sample 给定顶层神经元的状态，计算底层隐藏神经元的状态
+            state{length(obj.rbm_layers)}.h_field = h_state;
+            state{length(obj.rbm_layers)}.h_state = h_state;
+
+            for layer_idx = length(obj.rbm_layers):-1:1
+                state{layer_idx}.v_field = obj.rbm_layers{layer_idx}.likelihood(state{layer_idx}.h_state);
+                state{layer_idx}.v_state = ML.sample(state{layer_idx}.v_field);
+                if layer_idx > 1
+                    state{layer_idx-1}.h_field = state{layer_idx}.v_field;
+                    state{layer_idx-1}.h_state = state{layer_idx}.v_state;
+                end
+            end
+            
+            b_state = state{1}.v_state;
         end
         
         function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it)
@@ -44,6 +78,10 @@ classdef StackedRestrictedBoltzmannMachine
                     minibatchs{minibatch_idx} = obj.rbm_layers{layer_idx}.posterior(minibatchs{minibatch_idx});
                 end
             end
+        end
+        
+        function l = layer_num(obj)
+            l = length(obj.rbm_layers);
         end
     end
 end
