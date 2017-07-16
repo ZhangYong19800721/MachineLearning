@@ -38,6 +38,6 @@ function [train_images,train_labels,test_images,test_labels] = import_mnist(file
     train_labels = train_labels(1:(minibatch_size*minibatch_num));
     train_labels = reshape(train_labels,minibatch_size,minibatch_num);
     
-    test_images = mnist_test_images;
+    test_images = double(mnist_test_images) / 255;
     test_labels = mnist_test_labels;
 end
