@@ -41,53 +41,53 @@ classdef StackedAutoEncoder
             r_error_ave_old = mean(r_error_list); % 计算重建误差的均值
             ob = ob.initialize(r_error_ave_old);   % 用均值初始化观察者
             
-            layers_num_d = obj.decoder.layer_num();
-            layers_num_e = obj.encoder.layer_num();
+            layers_num = obj.decoder.layer_num();
             
             learn_rate = learn_rate_max;          % 将学习速度初始化为最大学习速度
             
             for it = 0:max_it
                 minibatch_idx = mod(it,minibatch_num) + 1;
                 minibatch = minibatchs{minibatch_idx};
+                N = size(minibatch,2); 
                 
                 delta = obj.wake(minibatch); % wake 阶段
                 
-                obj.decoder.rbm_layers{layers_num_d}.hidden_bias = obj.decoder.rbm_layers{layers_num_d}.hidden_bias + ...
-                    learn_rate * delta{layers_num_d+1}.v_bias;
+                obj.decoder.rbm_layers{layers_num}.hidden_bias = obj.decoder.rbm_layers{layers_num}.hidden_bias + ...
+                    learn_rate * delta{layers_num}.h_bias;
                 
-                for n = 1:layers_num_d
+                for n = 1:layers_num
                     obj.decoder.rbm_layers{n}.weight = obj.decoder.rbm_layers{n}.weight + learn_rate * delta{n}.weight;
                     obj.decoder.rbm_layers{n}.visual_bias = obj.decoder.rbm_layers{n}.visual_bias + learn_rate * delta{n}.v_bias;
                 end
                 
-                delta_sleep = obj.sleep_sample(minibatch); % sleep 阶段
-                for n = 1:num_of_layers
-                    velocity_sleep(n).weight = momentum * velocity_sleep(n).weight + learn_rate * delta_sleep(n).weight;
-                    obj.encoder_layers(n).rbm.weight = obj.encoder_layers(n).rbm.weight + velocity_sleep(n).weight;
-                    velocity_sleep(n).hidden_bias = momentum * velocity_sleep(n).hidden_bias + learn_rate * delta_sleep(n).hidden_bias;
-                    obj.encoder_layers(n).rbm.hidden_bias = obj.encoder_layers(n).rbm.hidden_bias + velocity_sleep(n).hidden_bias;
+                clear delta;
+                delta = obj.sleep(minibatch); % sleep 阶段
+                
+                for n = 1:layers_num
+                    obj.encoder.rbm_layers{n}.weight = obj.encoder.rbm_layers{n}.weight + learn_rate * delta{n}.weight;
+                    obj.encoder.rbm_layers{n}.hidden_bias = obj.encoder.rbm_layers{n}.hidden_bias + learn_rate * delta{n}.h_bias;
                 end
                 
                 % 计算重建误差
                 r_minibatch = obj.rebuild(minibatch);
-                rebuild_error = sum(sum(abs(r_minibatch - minibatch))) / size(minibatch,2);
-                rebuild_error_list(mod(it,ob_window_size)+1) = rebuild_error;
-                rebuild_error_average = mean(rebuild_error_list);
+                r_error = sum(sum(abs(r_minibatch - minibatch))) / N;
+                r_error_list(mod(it,ob_window_size)+1) = r_error;
+                r_error_ave_new = mean(r_error_list);
                 
-                if mod(it,ob_window_size) == 0
-                    if rebuild_error_average > rebuild_error_average_old % 当经过N次迭代的平均重建误差不下降时
+                if minibatch_idx == minibatch_num
+                    if r_error_ave_new > r_error_ave_old % 当经过N次迭代的平均重建误差不下降时
                         learn_rate = learn_rate / 2; % 就缩减学习速度
                         if learn_rate < learn_rate_min % 当学习速度小于最小学习速度时，退出
                             break;
                         end
                     end
-                    rebuild_error_average_old = rebuild_error_average;
+                    r_error_ave_old = r_error_ave_new;
                 end
                 
                 % 画图
-                titlename = strcat(strcat(strcat('wake learning - step : ',num2str(it)),'/ '),num2str(max_it));
-                titlename = strcat(titlename,strcat(';  rate : ',num2str(learn_rate)));
-                ob = ob.showit(rebuild_error_average,titlename);
+                description = strcat(strcat(strcat('迭代次数:',num2str(it)),'/ '),num2str(max_it));
+                description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
+                ob = ob.showit(r_error_ave_new,description);
             end
         end
         
@@ -115,19 +115,28 @@ classdef StackedAutoEncoder
             %   wake训练阶段，encoder的参数不变，调整decoder的参数
             
             N = size(minibatch,2); % 数据样本个数
-            layer_num_e = obj.encoder.layer_num();
-            layer_num_d = obj.decoder.layer_num();
+            layer_num = obj.decoder.layer_num();
             
-            [~,state_encoder] = obj.encoder.posterior_sample(minibatch); % 对编码器进行抽样
-            [~,state_decoder] = obj.decoder.likelihood_sample(state_encoder{layer_num_e}.h_state); % 对解码器进行抽样
-            state_decoder{layer_num_d}.h_field = repmat(ML.sigmoid(obj.decoder.rbm_layers{layer_num_d}.hidden_bias),1,N);
-            state_decoder{1}.v_state = minibatch;
+            % 对编码器进行抽样
+            [code,state_encoder] = obj.encoder.posterior_sample(minibatch); 
             
-            x = state_decoder{layer_num_d}.h_state;
-            y = state_decoder{layer_num_d}.h_field;
-            delta{layer_num_d+1}.v_bias = sum(x - y,2) / N;
+            % 对解码器进行抽样
+            state_decoder{layer_num}.h_field = repmat(ML.sigmoid(obj.decoder.rbm_layers{layer_num}.hidden_bias),1,N);
+            state_decoder{layer_num}.h_state = code;
+            for n = layer_num:-1:1  
+                state_decoder{n}.v_field = obj.decoder.rbm_layers{n}.likelihood(state_decoder{n}.h_state);
+                state_decoder{n}.v_state = state_encoder{n}.v_state;
+                if n > 1
+                    state_decoder{n-1}.h_state = state_decoder{n}.v_state;
+                    state_decoder{n-1}.h_field = state_decoder{n}.v_field;
+                end
+            end
             
-            for n = layer_num_d:-1:1
+            x = state_decoder{layer_num}.h_state;
+            y = state_decoder{layer_num}.h_field;
+            delta{layer_num}.h_bias = sum(x - y,2) / N;
+            
+            for n = layer_num:-1:1
                 x = state_decoder{n}.h_state;
                 a = state_decoder{n}.v_state;
                 b = state_decoder{n}.v_field;
@@ -139,40 +148,32 @@ classdef StackedAutoEncoder
         function delta = sleep(obj,minibatch)
             %SLEEP sleep阶段
             % sleep训练阶段，decoder的参数不变，调整encoder的参数
-            、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、、
             N = size(minibatch,2); % 数据样本个数
-            layer_num_e = obj.encoder.layer_num();
-            layer_num_d = obj.decoder.layer_num();
+            layer_num = obj.encoder.layer_num();
             
-            decoder(num_of_layers).hidden_s = obj.encode_sample(minibatch);
+            % 先计算minibatch的码字
+            code = obj.encoder.posterior_sample(minibatch);
             
-            for n = num_of_layers:-1:1
-                decoder(n).visual_p = obj.decoder_layers(n).rbm.likelihood(decoder(n).hidden_s);
-                if n > 1
-                    decoder(n).visual_s = DML.sample(decoder(n).visual_p);
-                else
-                    decoder(n).visual_s = decoder(n).visual_p;
-                end
-                if n > 1
-                    decoder(n-1).hidden_s = decoder(n).visual_s;
-                end
-            end
+            % 对解码器进行抽样
+            [~,state_decoder] = obj.decoder.likelihood_sample(code); 
             
-            encoder(1).visual_s = decoder(1).visual_s;
-            for n = 1:num_of_layers
-                encoder(n).hidden_p = obj.encoder_layers(n).rbm.posterior(encoder(n).visual_s);
-                encoder(n).hidden_s = decoder(n).hidden_s;
-                if n < num_of_layers
-                    encoder(n+1).visual_s = encoder(n).hidden_s;
+            % 对编码器进行抽样
+            state_encoder{1}.v_state = state_decoder{1}.v_field;
+            for n = 1:layer_num
+                state_encoder{n}.h_field = obj.encoder.rbm_layers{n}.posterior(state_encoder{n}.v_state);
+                state_encoder{n}.h_state = state_decoder{n}.h_state;
+                if n < layer_num
+                    state_encoder{n+1}.v_state = state_encoder{n}.h_state;
+                    state_encoder{n+1}.v_field = state_encoder{n}.h_field;
                 end
             end
             
-            for n = 1:num_of_layers
-                x = encoder(n).hidden_s;
-                y = encoder(n).hidden_p;
-                z = encoder(n).visual_s;
-                delta(n).hidden_bias = sum(x - y,2) / size(minibatch,2);
-                delta(n).weight =  (z * (x - y)')' / size(minibatch,2);
+            for n = 1:layer_num
+                x = state_encoder{n}.h_state;
+                y = state_encoder{n}.h_field;
+                z = state_encoder{n}.v_state;
+                delta{n}.h_bias = sum(x - y,2) / N;
+                delta{n}.weight =  (z * (x - y)')' / N;
             end
         end
     end

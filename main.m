@@ -15,8 +15,11 @@ end
 configure = [784,500,128];
 
 sae = ML.StackedAutoEncoder(configure);
-sae = sae.pretrain(mnist,1e-4,0.1,1e2);
-sae = sae.train(mnist,1e-4,0.1,1e2);
+sae = sae.pretrain(mnist,1e-4,0.1,1e6);
+
+save('sae_pre.mat','sae');
+
+sae = sae.train(mnist,1e-4,0.1,1e6);
 
 save('sae.mat','sae');
 
