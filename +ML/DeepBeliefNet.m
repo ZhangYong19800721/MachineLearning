@@ -57,5 +57,29 @@ classdef DeepBeliefNet
             y = obj.softmax_rbm.classify(x);
         end
     end
+    
+    methods(Static)
+        function [dbn,e] = unit_test()
+            [train_images,train_labels,test_images,test_labels] = ML.import_mnist('./+ML/mnist.mat');
+            [D,minibatch_size,minibatch_num] = size(train_images); K = 10;
+            for minibatch_idx = 1:minibatch_num
+                L = zeros(K,minibatch_size);
+                I = sub2ind(size(L),1+train_labels(:,minibatch_idx),[1:minibatch_size]');
+                L(I) = 1;
+                mnist{minibatch_idx} = [L;train_images(:,:,minibatch_idx)];
+            end
+            
+            configure.stacked_rbm = [D,500,500];
+            configure.softmax_rbm = [K,500,2000];
+            
+            dbn = ML.DeepBeliefNet(configure);
+            dbn = dbn.pretrain(mnist,1e-6,0.1,1e6);
+            
+            save('dbn.mat','dbn');
+            
+            y = dbn.classify(test_images);
+            e = sum(y~=test_labels) / length(y);
+        end
+    end
 end
 
