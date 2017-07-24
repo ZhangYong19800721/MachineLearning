@@ -3,23 +3,20 @@
 
 clear all;
 close all;
-format compact;
 
-screen_message = 'Preparing train data set ......'
-[train_data] = import_mnist('mnist.mat');
-screen_message = 'Preparing train data set ...... ok!'
+load('sae_pre.mat');
 
-screen_message = 'ZYM initialized ......'
-zym = DML.ZYM([784,4096]);
-screen_message = 'ZYM initialized ...... ok!'
+[train_images,train_labels,test_images,test_labels] = import_mnist('mnist.mat');
+[D,S,M] = size(train_images);
 
-screen_message = 'ZYM is training ......'
-learn_rate_min = 1e-10;
-learn_rate_max = 1e-1;
-max_iteration = 1e6;
-zym = zym.train(train_data,learn_rate_min,learn_rate_max,max_iteration);
-screen_message = 'ZYM is training ...... ok!'
+for m = 1:M
+%     L = zeros(10,100);
+%     I = sub2ind(size(L),1+train_labels(:,m),[1:100]');
+%     L(I) = 1;
+%     mnist{m} = [L;train_images(:,:,m)];
+    mnist{m} = train_images(:,:,m);
+end
 
-screen_message = 'ZYM is saving ......'
-save('zym_trained.mat');
-screen_message = 'ZYM is saving ...... ok!'
+sae = sae.train(mnist,1e-4,0.005,1e6);
+
+save('sae.mat','sae');

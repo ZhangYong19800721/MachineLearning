@@ -12,7 +12,7 @@ for m = 1:M
     mnist{m} = train_images(:,:,m);
 end
 
-configure = [784,500,128];
+configure = [784,500,500,2000,30];
 
 sae = ML.StackedAutoEncoder(configure);
 sae = sae.pretrain(mnist,1e-4,0.1,1e6);
