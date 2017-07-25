@@ -114,8 +114,7 @@ classdef RestrictedBoltzmannMachine
         function h_field = posterior(obj,v_state) 
             %POSTERIOR 计算后验概率
             % 在给定显层神经元取值的情况下，计算隐神经元的激活概率
-            N = size(v_state,2);
-            h_field = ML.sigmoid(obj.weight * v_state + repmat(obj.hidden_bias,1,N));
+            h_field = ML.sigmoid(obj.foreward(v_state));
         end
         
         function v_state = likelihood_sample(obj,h_state) 
@@ -127,11 +126,16 @@ classdef RestrictedBoltzmannMachine
         function v_field = likelihood(obj,h_state) 
             % likelihood 计算似然概率
             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
-            N = size(h_state,2);
-            v_field = ML.sigmoid(obj.weight'* h_state + repmat(obj.visual_bias,1,N));
+            v_field = ML.sigmoid(obj.backward(h_state));
         end
         
-        recons = reconstruct(obj,visual) % 在给定显层神经元取值的情况下，计算重建显层神经元的取值 
+        function y = foreward(obj,x)
+            y = obj.weight * x + repmat(obj.hidden_bias,1,size(x,2));
+        end
+        
+        function x = backward(obj,y)
+            x = obj.weight'* y + repmat(obj.visual_bias,1,size(y,2));
+        end
     end
     
     methods (Access = private)
