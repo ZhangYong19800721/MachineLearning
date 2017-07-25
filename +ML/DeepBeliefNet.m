@@ -60,6 +60,8 @@ classdef DeepBeliefNet
     
     methods(Static)
         function [dbn,e] = unit_test()
+            clear all;
+            close all;
             [train_images,train_labels,test_images,test_labels] = ML.import_mnist('./+ML/mnist.mat');
             [D,minibatch_size,minibatch_num] = size(train_images); K = 10;
             for minibatch_idx = 1:minibatch_num
@@ -78,7 +80,7 @@ classdef DeepBeliefNet
             save('dbn.mat','dbn');
             
             y = dbn.classify(test_images);
-            e = sum(y~=test_labels) / length(y);
+            e = sum(y~=test_labels') / length(y);
         end
     end
 end
