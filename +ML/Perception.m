@@ -4,11 +4,11 @@ classdef Perception
     
     properties
         weight; % 元胞数组，weight{m}表示第m层的权值
-        bias;   % 元胞数组，bias{m}表示第m层的偏置值
+        bias;   % 元胞数组，bias{m}  表示第m层的偏置值
     end
     
     methods % 构造函数
-        function obj = Perception(configure)
+        function obj = Perception(configure,f)
             % Perception 构造函数
             M = length(configure) - 1;
             for m = 1:M
@@ -32,6 +32,13 @@ classdef Perception
             layer_num = length(obj.bias);
             ob_window_size = minibatch_num;
             ob = ML.Observer('均方误差',1,ob_window_size,'xxx');
+            
+            % 初始化动量倍率为0.5
+            momentum = 0.5;
+            for m = 1:layer_num
+                velocity{m}.weight = zeros(size(obj.weight{m}));
+                velocity{m}.bias   = zeros(size(obj.bias  {m}));
+            end
             
             learn_rate = learn_rate_max; % 初始化学习速度为最大学习速度
             error_list = zeros(1,ob_window_size);
@@ -80,9 +87,15 @@ classdef Perception
                     end
                 end
                 
+                momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 for m = 1:layer_num
-                    obj.weight{m} = obj.weight{m} - learn_rate * delta{m}.weight / minibatch_size;
-                    obj.bias{m}   = obj.bias{m}   - learn_rate * delta{m}.bias   / minibatch_size;
+                    velocity{m}.weight = momentum * velocity{m}.weight + learn_rate * delta{m}.weight / minibatch_size;
+                    velocity{m}.bias   = momentum * velocity{m}.bias   + learn_rate * delta{m}.bias   / minibatch_size;
+                end
+                
+                for m = 1:layer_num
+                    obj.weight{m} = obj.weight{m} - velocity{m}.weight;
+                    obj.bias{m}   = obj.bias{m}   - velocity{m}.bias;
                 end
             end
         end
@@ -98,7 +111,11 @@ classdef Perception
           
             for m = 1:M
                 n{m} = obj.weight{m} * x + repmat(obj.bias{m},1,size(x,2));
-                a{m} = ML.sigmoid(n{m});
+                if m < M
+                    a{m} = ML.sigmoid(n{m});
+                else
+                    a{m} = n{m};
+                end
                 x = a{m};
             end
             
@@ -112,7 +129,9 @@ classdef Perception
             M = length(obj.bias); % 得到层数
 
             [~,~,a] = obj.do(point); % 首先执行正向计算,并记录每一层的输出
-            s{M} = 2 * (label - a{M}) .* a{M} .* (a{M} - 1); % 计算顶层的敏感性
+           
+            %s{M} = 2 * (label - a{M}) .* a{M} .* (a{M} - 1); % 计算顶层的敏感性
+            s{M} = -2 * (label - a{M}); % 计算顶层的敏感性
             
             for m = (M-1):-1:1  % 反向传播敏感性
                 s{m} = diag(a{m} .* (1 - a{m})) * obj.weight{m+1}' * s{m+1}; 
@@ -205,6 +224,38 @@ classdef Perception
             label = [ones(1,N) zeros(1,N)];
             y = perception.do(daata) > 0.5;
             e = sum(xor(y,label)) / length(y);
+        end
+        
+        function [perception,e] = unit_test4()
+            clear all;
+            close all;
+            M = 100; S = 100; N = M * S;
+            x = linspace(-2,2,N); 
+            k = 2;
+            f = @(x)sin(k * pi * x / 4);
+            l = f(x);
+            
+            configure = [1,6,1]; 
+            perception = ML.Perception(configure);
+            perception = perception.initialize();
+            
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,perception.do(x)); hold off;
+            
+            for minibatch_idx = 1:M
+                data{minibatch_idx}.points = x(minibatch_idx:S:(M*S));
+                data{minibatch_idx}.labels = f(data{minibatch_idx}.points);
+            end
+            
+            perception = perception.train(data,1e-6,0.1,1e5);
+            
+            figure(3);
+            y = perception.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r'); hold off;
+            
+            e = norm(l - y,2);
         end
     end
 end
