@@ -12,6 +12,7 @@ classdef LeastSqure
         function [x1,z1] = LevenbergMarquardt(f,J,x0,epsilon)
             %LevenbergMarquardt 一种求解最小二乘问题的数值算法
             %   是一种改进的高斯牛顿法，它的搜索方向介于高斯牛顿方向和最速下降方向之间
+            
             alfa = 0.01; beda = 10; D = length(x0);
             
             x1 = x0; z1 = [];
@@ -43,8 +44,8 @@ classdef LeastSqure
             clear all
             close all
             
-            F = @(x)(x - [3 2]');
-            J = @(x)([1 0; 0 1]); 
+            F = @(x)([x(1) - x(2); x(1) + x(2)]);
+            J = @(x)([1 -1; 1 1]); 
             x0 = [10 10]';
             [x,z] = optimal.LeastSqure.LevenbergMarquardt(F,J,x0,1e-6);
         end
