@@ -253,7 +253,7 @@ classdef Perception
             figure(3);
             y = perception.do(x);
             plot(x,l,'b'); hold on;
-            plot(x,y,'r'); hold off;
+            plot(x,y,'r.'); hold off;
             
             e = norm(l - y,2);
         end
