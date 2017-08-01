@@ -18,7 +18,7 @@ function [x1,z1] = LevenbergMarquardt(F,J,x0,epsilon,max_it)
             break;
         end
         delta = -1 * (j1'*j1 + alfa * eye(D)) \ g1;
-        x2 = x1 + delta';
+        x2 = x1 + delta;
         f2 = F.myfunc(x2);
         z1 = norm(f1,2).^2;
         z2 = norm(f2,2).^2;

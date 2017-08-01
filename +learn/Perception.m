@@ -3,7 +3,7 @@ classdef Perception
     %   
     
     properties
-        weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中
+        weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中[P,1]
         num_hidden;  % num_hidden{m}表示第m层的隐神经元个数
         num_visual;  % num_visual{m}表示第m层的显神经元个数
         star_w_idx;  % star_w_idx{m}表示第m层的权值的起始位置
@@ -38,8 +38,10 @@ classdef Perception
         function obj = initialize(obj)
             M = length(obj.num_hidden); % 得到层数
             for m = 1:M
-                obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m}) = 0.01 * randn(size(obj.star_w_idx{m}:obj.stop_w_idx{m})); % 将权值初始化为0附近的随机数
-                obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m}) = zeros(size(obj.star_b_idx{m}:obj.stop_b_idx{m})); % 将偏置值初始化为0
+                obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m},1) = ...
+                    0.01 * randn(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]')); % 将权值初始化为0附近的随机数
+                obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m},1) = ...
+                    zeros(size([obj.star_b_idx{m}:obj.stop_b_idx{m}]')); % 将偏置值初始化为0
             end
         end
         
@@ -70,7 +72,7 @@ classdef Perception
             close all;
             N = 2000;
             x = linspace(-2,2,N);
-            k = 6;
+            k = 3;
             f = @(x)sin(k * pi * x / 4);
             l = f(x);
             
@@ -98,27 +100,31 @@ classdef Perception
         function [perception,e] = unit_test2()
             clear all;
             close all;
-            N = 1000;
-            r1 = 2 * rand(1,N) + 8; a1 =  pi * rand(1,N); group1 = repmat(r1,2,1) .* [cos(a1); sin(a1)];
-            r2 = 2 * rand(1,N) + 8; a2 = -pi * rand(1,N); group2 = repmat(r2,2,1) .* [cos(a2); sin(a2)];
-            group1(1,:) = group1(1,:) + 4; group1(2,:) = group1(2,:) - 2;   
-            group2(1,:) = group2(1,:) - 4; group2(2,:) = group2(2,:) + 2; 
-            figure(1);
-            plot(group1(1,:),group1(2,:),'+'); hold on;
-            plot(group2(1,:),group2(2,:),'o'); hold off;
+            N = 2000;
+            x = linspace(-2,2,N);
+            k = 3;
+            f = @(x)sin(k * pi * x / 4);
+            l = f(x);
             
-            configure = [2,20,1];
+            configure = [1,6,1];
             perception = learn.Perception(configure);
             perception = perception.initialize();
             
-            points = [group1 group2];
-            labels = [ones(1,N) zeros(1,N)];
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,perception.do(x)); hold off;
             
-            lmbp = learn.LevenbergMarquardtBP(points,labels,perception);
-            perception.weight = optimal.LevenbergMarquardt(lmbp,lmbp,perception.weight,1e-2,2e2);
+            cgbp = learn.ConjugateGradientBP(x,l,perception);
             
-            y = perception.do(points) > 0.5;
-            e = sum(xor(y,labels)) / length(y);
+            weight = optimal.ConjugateGradient(cgbp,cgbp,perception.weight,1e-6,1e-7,1e5);
+            perception.weight = weight;
+            
+            figure(3);
+            y = perception.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r.'); hold off;
+            
+            e = norm(l - y,2);
         end
     end
 end
