@@ -64,6 +64,16 @@ classdef Perception
                 end
             end
         end
+        
+        function [w,r] = getw(obj,m)
+            r = obj.star_w_idx{m}:obj.stop_w_idx{m};
+            w = reshape(obj.weight(r),obj.num_hidden{m},obj.num_visual{m});
+        end
+        
+        function [b,r] = getb(obj,m)
+            r = obj.star_b_idx{m}:obj.stop_b_idx{m};
+            b = reshape(obj.weight(r),[],1);
+        end
     end
     
     methods(Static)
@@ -118,7 +128,7 @@ classdef Perception
             
             cgbp = learn.ConjugateGradientBP(x,l,perception);
             
-            weight = optimal.ConjugateGradient(cgbp,cgbp,perception.weight,1e-6,1e-7,1e5);
+            weight = optimal.ConjugateGradient(cgbp,cgbp,perception.weight,1e-6,1e2,1e-7,1e5);
             perception.weight = weight;
             
             figure(3);

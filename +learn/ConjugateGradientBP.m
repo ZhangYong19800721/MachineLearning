@@ -36,17 +36,15 @@ classdef ConjugateGradientBP
                 s = cell(1,M); % s用来记录敏感性
                 s{M} = -2 * (obj.labels(:,n) - a{M})'; % 计算顶层的敏感性
                 for m = (M-1):-1:1  % 反向传播敏感性
-                    weight = reshape(obj.percep.weight(obj.percep.star_w_idx{m+1}:obj.percep.stop_w_idx{m+1}),...
-                                     obj.percep.num_hidden{m+1},...
-                                     obj.percep.num_visual{m+1});
+                    weight = obj.percep.getw(m+1);
                     s{m} = s{m+1} * weight * diag(a{m}.*(1-a{m}));
                 end
                 
                 for m = 1:M
-                    cw = obj.percep.star_w_idx{m}:obj.percep.stop_w_idx{m};
-                    cb = obj.percep.star_b_idx{m}:obj.percep.stop_b_idx{m};
-
-                    H = obj.percep.num_hidden{m}; 
+                    [~,cw] = obj.percep.getw(m);
+                    [~,cb] = obj.percep.getb(m);
+                    
+                    H = obj.percep.num_hidden{m};
                     V = obj.percep.num_visual{m};
                     
                     if m == 1
@@ -54,7 +52,7 @@ classdef ConjugateGradientBP
                     else
                         f2w = repmat(s{m}',1,V) .* repmat(a{m-1}',H,1);
                     end
-
+                    
                     g(cw,1) = g(cw,1) + reshape(f2w,[],1);
                     g(cb,1) = g(cb,1) + s{m}';
                 end
