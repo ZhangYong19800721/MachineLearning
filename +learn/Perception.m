@@ -100,6 +100,8 @@ classdef Perception
         function [perception,e] = unit_test2()
             clear all;
             close all;
+            rng(1);
+            
             N = 2000;
             x = linspace(-2,2,N);
             k = 3;

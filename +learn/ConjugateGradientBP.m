@@ -48,20 +48,15 @@ classdef ConjugateGradientBP
 
                     H = obj.percep.num_hidden{m}; 
                     V = obj.percep.num_visual{m};
-                    n2w = zeros(H,H*V);
-                    for k = 1:H
-                        z = zeros(H,V); 
-                        if m == 1
-                            z(k,:) = obj.points(:,n)';
-                        else
-                            z(k,:) = a{m-1}';
-                        end
-                        n2w(k,:) = reshape(z,1,[]);
-                    end
-                    g(cw,1) = g(cw,1) + (s{m} * n2w)';
                     
-                    n2b = eye(H);
-                    g(cb,1) = g(cb,1) + (s{m} * n2b)';
+                    if m == 1
+                        f2w = repmat(s{m}',1,V) .* repmat(obj.points(:,n)',H,1);
+                    else
+                        f2w = repmat(s{m}',1,V) .* repmat(a{m-1}',H,1);
+                    end
+
+                    g(cw,1) = g(cw,1) + reshape(f2w,[],1);
+                    g(cb,1) = g(cb,1) + s{m}';
                 end
             end
             

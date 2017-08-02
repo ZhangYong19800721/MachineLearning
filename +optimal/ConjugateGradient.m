@@ -11,20 +11,20 @@ function [x1,y1] = ConjugateGradient(F,G,x0,epsilon1,epsilon2,max_it)
     
     alfa = optimal.GoldenSection(F,x1,d1,0,1e3,epsilon2);
     
-    for it = 0:max_it
+    for it = 1:max_it
         if norm(g1) < epsilon1
             break;
         end
         x2 = x1 + alfa * d1; 
         y2 = F.object(x2);
-        if y1 < y2
+        if mod(it,100) == 0 || y1 < y2
             d1 = -g1;
             alfa = optimal.GoldenSection(F,x1,d1,0,1e3,epsilon2);
             continue;
         end
         
         description = strcat(strcat(strcat('迭代次数:',num2str(it)),'/'),num2str(max_it));
-        description = strcat(description,strcat('梯度模:',num2str(norm(g1))));
+        description = strcat(description,strcat(' 梯度模:',num2str(norm(g1))));
         ob = ob.showit(y1,description);
         
         g2 = G.gradient(x2); % 计算x2处的梯度
