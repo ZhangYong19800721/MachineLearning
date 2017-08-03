@@ -29,7 +29,7 @@ classdef RestrictedBoltzmannMachine
             obj.visual_bias = visual_bias;
         end
         
-        function obj = initialize(obj,minibatchs) 
+        function obj = initialize(obj,minibatchs,visual_bias,hidden_bias) 
             %initialize 基于训练数据（由多个minibatch组成的训练数据集合）初始化权值矩阵，隐神经元偏置和显神经元偏置
             %           minibatchs 是一个元胞数组。
            
@@ -41,7 +41,7 @@ classdef RestrictedBoltzmannMachine
             end
             
             minibatch_sum = minibatch_sum ./ minibatch_num;
-            obj = obj.initialize_weight(minibatch_sum);
+            obj = obj.initialize_weight(minibatch_sum,visual_bias,hidden_bias);
         end
 
         function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it) 
@@ -51,7 +51,7 @@ classdef RestrictedBoltzmannMachine
             minibatch_num = length(minibatchs); % 得到minibatch的个数
             ob_window_size = minibatch_num;     % 设定观察窗口的大小为
             ob_var_num = 1;                     % 设定观察变量的个数
-            ob = ML.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight));
@@ -108,25 +108,25 @@ classdef RestrictedBoltzmannMachine
         function h_state = posterior_sample(obj,v_state)
             % posterior_sample 计算后验概率采样
             % 在给定显层神经元取值的情况下，对隐神经元进行抽样
-            h_state = ML.sample(obj.posterior(v_state));
+            h_state = learn.sample(obj.posterior(v_state));
         end
         
         function h_field = posterior(obj,v_state) 
             %POSTERIOR 计算后验概率
             % 在给定显层神经元取值的情况下，计算隐神经元的激活概率
-            h_field = ML.sigmoid(obj.foreward(v_state));
+            h_field = learn.sigmoid(obj.foreward(v_state));
         end
         
         function v_state = likelihood_sample(obj,h_state) 
             % likelihood_sample 计算似然概率采样
             % 在给定隐层神经元取值的情况下，对显神经元进行抽样
-            v_state = ML.sample(obj.likelihood(h_state));
+            v_state = learn.sample(obj.likelihood(h_state));
         end
         
         function v_field = likelihood(obj,h_state) 
             % likelihood 计算似然概率
             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
-            v_field = ML.sigmoid(obj.backward(h_state));
+            v_field = learn.sigmoid(obj.backward(h_state));
         end
         
         function y = foreward(obj,x)
@@ -153,11 +153,11 @@ classdef RestrictedBoltzmannMachine
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
             
-            h_field_0 = ML.sigmoid(obj.weight * minibatch + h_bias);
-            h_state_0 = ML.sample(h_field_0);
-            v_field_1 = ML.sigmoid(obj.weight'* h_state_0 + v_bias);
-            v_state_1 = ML.sample(v_field_1);
-            h_field_1 = ML.sigmoid(obj.weight * v_state_1 + h_bias);
+            h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
+            h_state_0 = learn.sample(h_field_0);
+            v_field_1 = learn.sigmoid(obj.weight'* h_state_0 + v_bias);
+            v_state_1 = learn.sample(v_field_1);
+            h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
             
             r_error =  sum(sum(abs(v_field_1 - minibatch))) / N; %计算在整个minibatch上的平均重建误差
             
@@ -166,14 +166,14 @@ classdef RestrictedBoltzmannMachine
             d_v_bias = (minibatch - v_field_1) * ones(N,1) / N;
         end
         
-        function obj = initialize_weight(obj,train_data)
+        function obj = initialize_weight(obj,train_data,visual_bias,hidden_bias)
             %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.
             obj.weight = 0.01 * randn(size(obj.weight));
             x = sum(train_data,2) / size(train_data,2);
-            x(x<=0) = x(x<=0) + 0.000001;
-            x(x>=1) = x(x>=1) - 0.000001;
+            x(x<=0) = x(x<=0) + 10.^visual_bias;
+            x(x>=1) = x(x>=1) - 10.^visual_bias;
             obj.visual_bias = log(x./(1-x));
-            obj.hidden_bias = zeros(size(obj.hidden_bias));
+            obj.hidden_bias = hidden_bias * ones(size(obj.hidden_bias));
         end
     end
     

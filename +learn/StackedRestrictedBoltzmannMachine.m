@@ -10,7 +10,7 @@ classdef StackedRestrictedBoltzmannMachine
             % DeepBeliefNet 构造函数
             layer_num = length(configure) - 1;
             for layer_idx = 1:layer_num
-                obj.rbm_layers{layer_idx} = ML.RestrictedBoltzmannMachine(configure(layer_idx),configure(layer_idx+1));
+                obj.rbm_layers{layer_idx} = learn.RestrictedBoltzmannMachine(configure(layer_idx),configure(layer_idx+1));
             end
         end
     end
@@ -66,13 +66,13 @@ classdef StackedRestrictedBoltzmannMachine
             b_state = state{1}.v_state;
         end
         
-        function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it)
+        function obj = pretrain(obj,minibatchs,init_visual_bias,init_hidden_bias,learn_rate_min,learn_rate_max,max_it)
             %pretrain 预训练
             % 使用CD1快速算法，逐层训练约束玻尔兹曼机（RBM）
             layer_num = length(obj.rbm_layers);
             
             for layer_idx = 1:layer_num
-                obj.rbm_layers{layer_idx} = obj.rbm_layers{layer_idx}.initialize(minibatchs); % 初始化第layer_idx层的RBM
+                obj.rbm_layers{layer_idx} = obj.rbm_layers{layer_idx}.initialize(minibatchs,init_visual_bias,init_hidden_bias); % 初始化第layer_idx层的RBM
                 obj.rbm_layers{layer_idx} = obj.rbm_layers{layer_idx}.pretrain(minibatchs,learn_rate_min,learn_rate_max,max_it); % 训练第layer_idx层的RBM
                 for minibatch_idx = 1:length(minibatchs) %将训练数据映射到上一层
                     minibatchs{minibatch_idx} = obj.rbm_layers{layer_idx}.posterior(minibatchs{minibatch_idx});

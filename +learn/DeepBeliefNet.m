@@ -9,8 +9,8 @@ classdef DeepBeliefNet
     methods
         function obj = DeepBeliefNet(configure) 
             % DeepBeliefNet ¹¹Ôìº¯Êý
-            obj.stacked_rbm = ML.StackedRestrictedBoltzmannMachine(configure.stacked_rbm);
-            obj.softmax_rbm = ML.SoftmaxRestrictedBoltzmannMachine(configure.softmax_rbm(1),configure.softmax_rbm(2),configure.softmax_rbm(3));
+            obj.stacked_rbm = learn.StackedRestrictedBoltzmannMachine(configure.stacked_rbm);
+            obj.softmax_rbm = learn.SoftmaxRestrictedBoltzmannMachine(configure.softmax_rbm(1),configure.softmax_rbm(2),configure.softmax_rbm(3));
         end
     end
     
@@ -31,7 +31,7 @@ classdef DeepBeliefNet
             end
         end
         
-        function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it)
+        function obj = pretrain(obj,minibatchs,init_visual_bias,init_hidden_bias,learn_rate_min,learn_rate_max,max_it)
             %pretrain Ô¤ÑµÁ·
             % Ê¹ÓÃCD1¿ìËÙËã·¨£¬Öð²ãÑµÁ·Ô¼Êø²£¶û×ÈÂü»ú£¨RBM£©
             num_softmax = obj.softmax_rbm.num_softmax;
@@ -42,7 +42,7 @@ classdef DeepBeliefNet
                 minibatchs_point{minibatch_idx} = minibatchs{minibatch_idx}((1+num_softmax):num_visual,:);
             end
             
-            obj.stacked_rbm = obj.stacked_rbm.pretrain(minibatchs_point,learn_rate_min,learn_rate_max,max_it); % Ô¤ÑµÁ·Õ»Ê½RBM
+            obj.stacked_rbm = obj.stacked_rbm.pretrain(minibatchs_point,init_visual_bias,init_hidden_bias,learn_rate_min,learn_rate_max,max_it); % Ô¤ÑµÁ·Õ»Ê½RBM
             
             for minibatch_idx = 1:length(minibatchs)
                 minibatchs_point{minibatch_idx} = obj.stacked_rbm.posterior(minibatchs_point{minibatch_idx});
@@ -62,7 +62,7 @@ classdef DeepBeliefNet
         function [dbn,e] = unit_test()
             clear all;
             close all;
-            [train_images,train_labels,test_images,test_labels] = ML.import_mnist('./+ML/mnist.mat');
+            [train_images,train_labels,test_images,test_labels] = learn.import_mnist('./+learn/mnist.mat');
             [D,minibatch_size,minibatch_num] = size(train_images); K = 10;
             for minibatch_idx = 1:minibatch_num
                 L = zeros(K,minibatch_size);
@@ -74,8 +74,8 @@ classdef DeepBeliefNet
             configure.stacked_rbm = [D,500,500];
             configure.softmax_rbm = [K,500,2000];
             
-            dbn = ML.DeepBeliefNet(configure);
-            dbn = dbn.pretrain(mnist,1e-6,0.1,1e6);
+            dbn = learn.DeepBeliefNet(configure);
+            dbn = dbn.pretrain(mnist,-6,-4,1e-6,0.1,1e6);
             
             save('dbn.mat','dbn');
             

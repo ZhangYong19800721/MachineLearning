@@ -114,7 +114,7 @@ classdef Perception
             
             N = 2000;
             x = linspace(-2,2,N);
-            k = 3;
+            k = 4;
             f = @(x)sin(k * pi * x / 4);
             l = f(x);
             

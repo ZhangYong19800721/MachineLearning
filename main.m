@@ -1,15 +1,26 @@
 clear all;
 close all;
 
-[train_images,train_labels,test_images,test_labels] = learn.import_mnist('+learn/mnist.mat');
-points = reshape(train_images,784,[]);        %points = points(:,1:100);
-labels = double(reshape(train_labels,1,[]));  %labels = labels(:,1:100);
+load('nucleotides.mat');
 
-configure = [784,1000,1];
-perception = learn.Perception(configure);
-perception = perception.initialize();
+[D,N] = size(nucleotide);
+shuffle_idx = randperm(N);
+nucleotide = nucleotide(:,shuffle_idx);
 
-lmbp = learn.ConjugateGradientBP(points,labels,perception);
+nucleotide = nucleotide ./ max(max(nucleotide));
 
-weight = optimal.ConjugateGradient(lmbp,lmbp,perception.weight,1e-5,1e2,1e-6,1e5);
-perception.weight = weight;
+minibatch_size = 100;
+minibatch_num  = floor(N / minibatch_size);
+
+for minibatch_idx = 1:minibatch_num
+    star_col = (minibatch_idx-1)*minibatch_size + 1;
+    stop_col = (minibatch_idx-1)*minibatch_size + minibatch_size;
+    points{minibatch_idx} = nucleotide(:,star_col:stop_col);
+end
+
+clear nucleotide;
+
+% configure = [8688,1024,64];
+rbm = learn.RestrictedBoltzmannMachine(D,1024);
+rbm = rbm.initialize(points,-100,-4);
+rbm = rbm.pretrain(points,1e-5,1e-1,1e6);
