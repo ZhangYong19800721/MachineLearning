@@ -54,7 +54,7 @@ classdef SoftmaxRestrictedBoltzmannMachine
             minibatch_num = length(minibatchs); % 得到minibatch的个数
             ob_window_size = minibatch_num;     % 设定观察窗口的大小为
             ob_var_num = 1;                     % 设定观察变量的个数
-            ob = ML.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight      = zeros(size(obj.weight));
@@ -111,22 +111,22 @@ classdef SoftmaxRestrictedBoltzmannMachine
         function h_state = posterior_sample(obj,v_state)
             % posterior_sample 计算后验概率采样
             % 在给定显层神经元取值的情况下，对隐神经元进行抽样
-            h_state = ML.sample(obj.posterior(v_state));
+            h_state = learn.sample(obj.posterior(v_state));
         end
         
         function h_field = posterior(obj,v_state) 
             %POSTERIOR 计算后验概率
             % 在给定显层神经元取值的情况下，计算隐神经元的激活概率
             N = size(v_state,2);
-            h_field = ML.sigmoid(obj.weight * v_state + repmat(obj.hidden_bias,1,N));
+            h_field = learn.sigmoid(obj.weight * v_state + repmat(obj.hidden_bias,1,N));
         end
         
         function v_state = likelihood_sample(obj,h_state) 
             % likelihood_sample 计算似然概率采样
             % 在给定隐层神经元取值的情况下，对显神经元进行抽样
             v_field = obj.likelihood(h_state);
-            s_state = ML.sample_softmax(v_field(1:obj.num_softmax,:));
-            v_state = ML.sample(v_field((obj.num_softmax+1):obj.num_visual,:));
+            s_state = learn.sample_softmax(v_field(1:obj.num_softmax,:));
+            v_state = learn.sample(v_field((obj.num_softmax+1):obj.num_visual,:));
             v_state = [s_state; v_state];
         end
         
@@ -135,8 +135,8 @@ classdef SoftmaxRestrictedBoltzmannMachine
             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
             N = size(h_state,2);
             v_sigma = obj.weight'* h_state + repmat(obj.visual_bias,1,N);
-            s_field = ML.softmax(v_sigma(1:obj.num_softmax,:));
-            v_field = ML.sigmoid(v_sigma((obj.num_softmax+1):obj.num_visual,:));
+            s_field = learn.softmax(v_sigma(1:obj.num_softmax,:));
+            v_field = learn.sigmoid(v_sigma((obj.num_softmax+1):obj.num_visual,:));
             v_field = [s_field; v_field];
         end
         
@@ -179,14 +179,14 @@ classdef SoftmaxRestrictedBoltzmannMachine
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
             
-            h_field_0 = ML.sigmoid(obj.weight * minibatch + h_bias);
-            h_state_0 = ML.sample(h_field_0);
+            h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
+            h_state_0 = learn.sample(h_field_0);
             v_sigma_1 = obj.weight'* h_state_0 + v_bias;
-            s_field_1 = ML.softmax(v_sigma_1(1:obj.num_softmax,:));
-            v_field_1 = ML.sigmoid(v_sigma_1((obj.num_softmax+1):obj.num_visual,:));
-            s_state_1 = ML.sample_softmax(s_field_1);
-            v_state_1 = ML.sample(v_field_1);
-            h_field_1 = ML.sigmoid(obj.weight * [s_state_1;v_state_1] + h_bias);
+            s_field_1 = learn.softmax(v_sigma_1(1:obj.num_softmax,:));
+            v_field_1 = learn.sigmoid(v_sigma_1((obj.num_softmax+1):obj.num_visual,:));
+            s_state_1 = learn.sample_softmax(s_field_1);
+            v_state_1 = learn.sample(v_field_1);
+            h_field_1 = learn.sigmoid(obj.weight * [s_state_1;v_state_1] + h_bias);
             
             r_error =  sum(sum(abs([s_field_1;v_field_1] - minibatch))) / N; %计算在整个train_data上的平均reconstruction error
             

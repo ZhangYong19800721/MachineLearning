@@ -177,5 +177,26 @@ classdef RestrictedBoltzmannMachine
         end
     end
     
+    methods(Static)
+        function [rbm,e] = unit_test()
+            clear all;
+            close all;
+            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            [D,S,M] = size(data);
+            
+            for minibatch_idx = 1:M
+                mnist{minibatch_idx} = data(:,:,minibatch_idx);
+            end
+            
+            rbm = learn.RestrictedBoltzmannMachine(D,500);
+            rbm = rbm.initialize(mnist,-6,0);
+            rbm = rbm.pretrain(mnist,1e-6,1e-1,1e5);
+            
+            save('rbm.mat','rbm');
+            
+            e = 1;
+        end
+    end
+    
 end
 

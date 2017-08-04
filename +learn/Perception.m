@@ -80,6 +80,8 @@ classdef Perception
         function [perception,e] = unit_test1()
             clear all;
             close all;
+            rng(1);
+            
             N = 2000;
             x = linspace(-2,2,N);
             k = 3;
@@ -96,7 +98,7 @@ classdef Perception
             
             lmbp = learn.LevenbergMarquardtBP(x,l,perception);
             
-            weight = optimal.LevenbergMarquardt(lmbp,lmbp,perception.weight,1e-2,2e3);
+            weight = optimal.LevenbergMarquardt(lmbp,perception.weight,1e-6,1e5);
             perception.weight = weight;
             
             figure(3);
@@ -128,7 +130,7 @@ classdef Perception
             
             cgbp = learn.ConjugateGradientBP(x,l,perception);
             
-            weight = optimal.ConjugateGradient(cgbp,cgbp,perception.weight,1e-6,1e2,1e-7,1e5);
+            weight = optimal.ConjugateGradient(cgbp,perception.weight,1e-6,1e-7,1e5,1e3,100);
             perception.weight = weight;
             
             figure(3);
