@@ -1,5 +1,5 @@
 classdef RestrictedBoltzmannMachine
-    %RESTRICTEDBOLTZMANNMACHINE 约束玻尔兹曼机
+    %RestrictedBoltzmannMachine 约束玻尔兹曼机
     %   
     
     properties
