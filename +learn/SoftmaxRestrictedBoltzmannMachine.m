@@ -188,7 +188,7 @@ classdef SoftmaxRestrictedBoltzmannMachine
             v_state_1 = learn.sample(v_field_1);
             h_field_1 = learn.sigmoid(obj.weight * [s_state_1;v_state_1] + h_bias);
             
-            r_error =  sum(sum(abs([s_field_1;v_field_1] - minibatch))) / N; %计算在整个train_data上的平均reconstruction error
+            r_error =  sum(sum(([s_field_1;v_field_1] - minibatch).^2)) / N; %计算在整个train_data上的平均reconstruction error
             
             d_weight = (h_field_0 * minibatch' - h_field_1 * [s_state_1;v_state_1]') / N;
             d_h_bias = (h_state_0 - h_field_1) * ones(N,1) / N;
