@@ -94,7 +94,7 @@ classdef GBRBM
                 description = strcat('重建误差:',num2str(r_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                disp(description);
+                % disp(description);
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
@@ -171,12 +171,13 @@ classdef GBRBM
             v_field_1 = obj.weight'* h_state_0 + v_bias;
             v_state_1 = v_field_1 + randn(size(v_field_1));
             h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
+            % h_state_1 = learn.sample(h_field_1);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
-            d_h_bias = (h_state_0 - h_field_1) * ones(N,1) / N;
-            d_v_bias = (minibatch - v_field_1) * ones(N,1) / N;
+            d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
+            d_v_bias = (minibatch - v_state_1) * ones(N,1) / N;
         end
         
         function obj = initialize_weight(obj,train_data)
@@ -188,7 +189,7 @@ classdef GBRBM
     end
     
     methods(Static)
-        function [grbm,e] = unit_test()
+        function [gbrbm,e] = unit_test()
             clear all;
             close all;
             rng(1);
@@ -225,21 +226,21 @@ classdef GBRBM
                 mnist{minibatch_idx} = data(:,:,minibatch_idx);
             end
             
-            grbm = learn.GaussianRBM(D,500);
-            grbm = grbm.initialize(mnist);
-            grbm = grbm.pretrain(mnist,1e-6,1e-3,1e6);
+            gbrbm = learn.GBRBM(D,100);
+            gbrbm = gbrbm.initialize(mnist);
+            gbrbm = gbrbm.pretrain(mnist,1e-6,1e-4,1e6);
             
-            recon_data = dewhitening * grbm.reconstruct(trwhitening * Z) + AVE_X;
+            recon_data = dewhitening * gbrbm.reconstruct(trwhitening * Z) + AVE_X;
             
-            image = reshape(recon_data(:,1),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,2),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,3),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,4),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,5),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,6),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,7),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,8),28,28)'; imshow(uint8(image));
-            image = reshape(recon_data(:,9),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,1),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,2),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,3),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,4),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,5),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,6),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,7),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,8),28,28)'; imshow(uint8(image));
+%             image = reshape(recon_data(:,9),28,28)'; imshow(uint8(image));
             
             e = 1;
         end

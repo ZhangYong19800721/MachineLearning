@@ -93,7 +93,7 @@ classdef RBM
                 description = strcat('重建误差:',num2str(r_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                disp(description);
+                % disp(description);
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
@@ -174,8 +174,8 @@ classdef RBM
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
-            d_h_bias = (h_state_0 - h_field_1) * ones(N,1) / N;
-            d_v_bias = (minibatch - v_field_1) * ones(N,1) / N;
+            d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
+            d_v_bias = (minibatch - v_state_1) * ones(N,1) / N;
         end
         
         function obj = initialize_weight(obj,train_data,visual_bias,hidden_bias)
