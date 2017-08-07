@@ -50,8 +50,8 @@ classdef RBM
             
             minibatch_num = length(minibatchs); % 得到minibatch的个数
             ob_window_size = minibatch_num;     % 设定观察窗口的大小为
-            ob_var_num = 1;                     % 设定观察变量的个数
-            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            %ob_var_num = 1;                     % 设定观察变量的个数
+            %ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight));
@@ -68,7 +68,7 @@ classdef RBM
                 r_error_list(idx) = r_error;
             end
             r_error_ave_old = mean(r_error_list);
-            ob = ob.initialize(r_error_ave_old);
+            %ob = ob.initialize(r_error_ave_old);
             
             learn_rate = learn_rate_max; %初始化学习速度
             
@@ -90,9 +90,11 @@ classdef RBM
                     r_error_ave_old = r_error_ave_new;
                 end
                 
-                description = strcat(strcat(strcat('迭代次数:',num2str(it)),'/'),num2str(max_it));
+                description = strcat('重建误差:',num2str(r_error_ave_new));
+                description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                ob = ob.showit(r_error_ave_new,description);
+                disp(description);
+                %ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 v_weight = momentum * v_weight + learn_rate * d_weight;
@@ -136,6 +138,16 @@ classdef RBM
         function x = backward(obj,y)
             x = obj.weight'* y + repmat(obj.visual_bias,1,size(y,2));
         end
+        
+        function y = reconstruct(obj,x)
+            N = size(x,2);
+            h_bias = repmat(obj.hidden_bias,1,N);
+            v_bias = repmat(obj.visual_bias,1,N);
+            
+            h_field_0 = learn.sigmoid(obj.weight * x + h_bias);
+            h_state_0 = learn.sample(h_field_0);
+            y = learn.sigmoid(obj.weight'* h_state_0 + v_bias);
+        end
     end
     
     methods (Access = private)
@@ -159,7 +171,7 @@ classdef RBM
             v_state_1 = learn.sample(v_field_1);
             h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
             
-            r_error =  sum(sum(abs(v_field_1 - minibatch))) / N; %计算在整个minibatch上的平均重建误差
+            r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
             d_h_bias = (h_state_0 - h_field_1) * ones(N,1) / N;
@@ -182,7 +194,7 @@ classdef RBM
             clear all;
             close all;
             [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(data);
+            [D,S,M] = size(data); N = S*M;
             
             for minibatch_idx = 1:M
                 mnist{minibatch_idx} = data(:,:,minibatch_idx);
@@ -192,9 +204,22 @@ classdef RBM
             rbm = rbm.initialize(mnist,-6,0);
             rbm = rbm.pretrain(mnist,1e-6,1e-1,1e5);
             
-            save('rbm.mat','rbm');
+            %save('rbm.mat','rbm');
             
-            e = 1;
+            data = reshape(data,D,[]);
+            recon_data = rbm.reconstruct(data);
+            image = reshape(recon_data(:,1),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,2),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,3),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,4),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,5),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,6),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,7),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,8),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,9),28,28)'; imshow(uint8(255*image));
+            image = reshape(recon_data(:,10),28,28)'; imshow(uint8(255*image));
+            
+            e = sum(sum((255*recon_data - 255*data).^2)) / N;
         end
     end
     
