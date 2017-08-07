@@ -8,7 +8,6 @@ classdef GaussianRBM
         weight;     % 权值矩阵(num_hidden * num_visual)
         hidden_bias; % 隐藏神经元的偏置
         visual_bias; % 可见神经元的偏置
-        visual_sgma; % 显层神经元加性高斯噪声的标准差
     end
     
     methods
@@ -18,7 +17,6 @@ classdef GaussianRBM
             obj.weight = zeros(obj.num_hidden,obj.num_visual);
             obj.hidden_bias = zeros(obj.num_hidden,1);
             obj.visual_bias = zeros(obj.num_visual,1);
-            obj.visual_sgma = ones(obj.num_visual,1); % 将显层神经元的标准差初始化为1
         end
     end
     
@@ -60,7 +58,6 @@ classdef GaussianRBM
             v_weight = zeros(size(obj.weight));
             v_h_bias = zeros(size(obj.hidden_bias));
             v_v_bias = zeros(size(obj.visual_bias));
-            v_v_sgma = zeros(size(obj.visual_sgma));
             
             % 初始化动量倍率为0.5
             momentum = 0.5;
@@ -68,7 +65,7 @@ classdef GaussianRBM
             r_error_list = zeros(1,ob_window_size);
             for idx = 1:minibatch_num  % 初始化重建误差列表的移动平均值
                 minibatch = minibatchs{idx};
-                [~, ~, ~, ~, r_error] = obj.CD1(minibatch);
+                [~, ~, ~, r_error] = obj.CD1(minibatch);
                 r_error_list(idx) = r_error;
             end
             r_error_ave_old = mean(r_error_list);
@@ -80,7 +77,7 @@ classdef GaussianRBM
                 minibatch_idx = mod(it,minibatch_num)+1;  % 取一个minibatch
                 minibatch = minibatchs{minibatch_idx};
                 
-                [d_weight, d_h_bias, d_v_bias, d_v_sgma, r_error] = obj.CD1(minibatch);
+                [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch);
                 r_error_list(minibatch_idx) = r_error;
                 r_error_ave_new = mean(r_error_list);
                 
@@ -94,22 +91,31 @@ classdef GaussianRBM
                     r_error_ave_old = r_error_ave_new;
                 end
                 
-                description = strcat(strcat(strcat('迭代次数:',num2str(it)),'/'),num2str(max_it));
+                description = strcat('重建误差:',num2str(r_error_ave_new));
+                description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
+                disp(description);
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 v_weight = momentum * v_weight + learn_rate * d_weight;
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
-                v_v_sgma = momentum * v_v_sgma + learn_rate * d_v_sgma;
                 
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
-                obj.visual_sgma = obj.visual_sgma + v_v_sgma;
-                obj.visual_sgma(obj.visual_sgma<=0) = eps;
             end
+        end
+        
+        function y = reconstruct(obj,x)
+            N = size(x,2); % 样本的个数
+            h_bias = repmat(obj.hidden_bias,1,N);
+            v_bias = repmat(obj.visual_bias,1,N);
+            
+            h_field_0 = learn.sigmoid(obj.weight * x + h_bias);
+            h_state_0 = learn.sample(h_field_0);
+            y = obj.weight'* h_state_0 + v_bias;
         end
         
 %         function h_state = posterior_sample(obj,v_state)
@@ -146,7 +152,7 @@ classdef GaussianRBM
     end
     
     methods (Access = private)
-        function [d_weight,d_h_bias,d_v_bias,d_v_sgma,r_error] = CD1(obj, minibatch)
+        function [d_weight,d_h_bias,d_v_bias,r_error] = CD1(obj, minibatch)
             % 使用Contrastive Divergence 1 (CD1)方法对约束玻尔兹曼RBM机进行快速训练
             % 输入：
             %   minibatch，一组训练数据，一列代表一个训练样本，列数表示训练样本的个数
@@ -159,21 +165,18 @@ classdef GaussianRBM
             N = size(minibatch,2); % 训练样本的个数
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
-            v_sgma = repmat(obj.visual_sgma,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
+            h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
             h_state_0 = learn.sample(h_field_0);
-            v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
-            v_state_1 = v_field_1 + v_sgma .* randn(size(v_sgma));
-            h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
+            v_field_1 = obj.weight'* h_state_0 + v_bias;
+            v_state_1 = v_field_1 + randn(size(v_field_1));
+            h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
             
-            r_error =  sum(sum(abs(v_field_1 - minibatch))) / N; %计算在整个minibatch上的平均重建误差
+            r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
-            d_weight = (h_field_0 * (minibatch ./ v_sgma)' - h_field_1 * (v_state_1 ./ v_sgma)') / N;
+            d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
             d_h_bias = (h_state_0 - h_field_1) * ones(N,1) / N;
-            d_v_bias = ((minibatch - v_field_1) ./ v_sgma) * ones(N,1) / N;
-            d_v_sgma = (sum(((minibatch - v_bias).^2) ./ (v_sgma.^3),2)) / N - sum(((minibatch ./ v_sgma.^2) * h_field_0') .* obj.weight',2) / N ...
-                     - (sum(((v_state_1 - v_bias).^2) ./ (v_sgma.^3),2)) / N + sum(((v_state_1 ./ v_sgma.^2) * h_field_1') .* obj.weight',2) / N;
+            d_v_bias = (minibatch - v_field_1) * ones(N,1) / N;
         end
         
         function obj = initialize_weight(obj,train_data)
@@ -188,9 +191,35 @@ classdef GaussianRBM
         function [grbm,e] = unit_test()
             clear all;
             close all;
-            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            data = 255 * data;
-            [D,S,M] = size(data);
+            rng(1);
+            
+            %[data,~,~,~] = learn.import_mnist('./+learn/mnist.mat'); data = 255 * data;
+            
+            D = 10; N = 1e5; S = 100; M = 1000;
+            MU = 1:D; SIGMA = 10*rand(D); SIGMA = SIGMA * SIGMA';
+            data = mvnrnd(MU,SIGMA,N)';
+            X = data; AVE_X = repmat(mean(X,2),1,N);
+            Z = double(X) - AVE_X;
+            Y = Z*Z';
+            [P,ZK] = eig(Y); 
+            ZK=diag(ZK); 
+            ZK(ZK<=0)=0;
+            DK=ZK; DK(ZK>0)=1./(ZK(ZK>0)); 
+            
+            trwhitening =    sqrt(N-1)  * P * diag(sqrt(DK)) * P';
+            dewhitening = (1/sqrt(N-1)) * P * diag(sqrt(ZK)) * P';
+            
+%             image = reshape(dewhitening * trwhitening * data(:,1,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,2,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,3,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,4,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,5,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,6,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,7,1),28,28)'; imshow(uint8(image));
+%             image = reshape(dewhitening * trwhitening * data(:,8,1),28,28)'; imshow(uint8(image));
+            
+            data = trwhitening * Z;
+            data = reshape(data,D,S,M); 
             
             for minibatch_idx = 1:M
                 mnist{minibatch_idx} = data(:,:,minibatch_idx);
@@ -200,7 +229,17 @@ classdef GaussianRBM
             grbm = grbm.initialize(mnist);
             grbm = grbm.pretrain(mnist,1e-6,1e-3,1e6);
             
-            save('grbm.mat','grbm');
+            recon_data = dewhitening * grbm.reconstruct(trwhitening * Z) + AVE_X;
+            
+            image = reshape(recon_data(:,1),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,2),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,3),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,4),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,5),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,6),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,7),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,8),28,28)'; imshow(uint8(image));
+            image = reshape(recon_data(:,9),28,28)'; imshow(uint8(image));
             
             e = 1;
         end
