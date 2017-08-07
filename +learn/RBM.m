@@ -50,8 +50,8 @@ classdef RBM
             
             minibatch_num = length(minibatchs); % 得到minibatch的个数
             ob_window_size = minibatch_num;     % 设定观察窗口的大小为
-            %ob_var_num = 1;                     % 设定观察变量的个数
-            %ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            ob_var_num = 1;                     % 设定观察变量的个数
+            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight));
@@ -68,7 +68,7 @@ classdef RBM
                 r_error_list(idx) = r_error;
             end
             r_error_ave_old = mean(r_error_list);
-            %ob = ob.initialize(r_error_ave_old);
+            ob = ob.initialize(r_error_ave_old);
             
             learn_rate = learn_rate_max; %初始化学习速度
             
@@ -94,7 +94,7 @@ classdef RBM
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
                 disp(description);
-                %ob = ob.showit(r_error_ave_new,description);
+                ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 v_weight = momentum * v_weight + learn_rate * d_weight;
