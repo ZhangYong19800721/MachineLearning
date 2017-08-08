@@ -23,15 +23,7 @@ classdef GBRBM
     end
     
     methods
-%         function obj = construct(obj,weight,visual_bias,hidden_bias,visual_sgma)
-%             %construct 使用权值、隐神经元偏置、显神经元偏置直接构建RBM
-%             [obj.num_hidden, obj.num_visual] = size(weight);
-%             obj.weight = weight;
-%             obj.hidden_bias = hidden_bias;
-%             obj.visual_bias = visual_bias;
-%             obj.visual_sgma = visual_sgma;
-%         end
-        
+
         function obj = initialize(obj,minibatchs) 
             %initialize 基于训练数据（由多个minibatch组成的训练数据集合）初始化权值矩阵，隐神经元偏置和显神经元偏置
             %           minibatchs 是一个[D,S,M]维的数组。
@@ -41,7 +33,7 @@ classdef GBRBM
             obj = obj.initialize_weight(minibatchs);
         end
 
-        function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it) 
+        function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,learn_sgma,max_it) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
@@ -78,7 +70,7 @@ classdef GBRBM
                 r_error_list(minibatch_idx) = r_error;
                 r_error_ave_new = mean(r_error_list);
                 
-                if minibatch_idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
+                if minibatch_idx == M % 当所有的minibatch被轮讯了一遍的时候（到达观察窗口最右边的时候）
                     if r_error_ave_new > r_error_ave_old
                         learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
@@ -95,16 +87,17 @@ classdef GBRBM
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
-                v_weight = momentum * v_weight + learn_rate * d_weight;
+                weigth_cost = 1e-4;
+                v_weight = momentum * v_weight + learn_rate * (d_weight - weigth_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
-                v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
-                v_v_sgma = momentum * v_v_sgma + learn_rate * d_v_sgma;
+                v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias; 
+                v_v_sgma = momentum * v_v_sgma + learn_sgma * d_v_sgma;
                 
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
                 obj.visual_sgma = obj.visual_sgma + v_v_sgma;
-                obj.visual_sgma(obj.visual_sgma <= 0.001) = 0.001;
+                obj.visual_sgma(obj.visual_sgma <= 5e-3) = 5e-3;
             end
         end
         
@@ -112,43 +105,13 @@ classdef GBRBM
             N = size(x,2); % 样本的个数
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
+            v_sgma = repmat(obj.visual_sgma,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * x + h_bias);
+            h_field_0 = learn.sigmoid(obj.weight * (x ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
             y = obj.weight'* h_state_0 + v_bias;
         end
         
-%         function h_state = posterior_sample(obj,v_state)
-%             % posterior_sample 计算后验概率采样
-%             % 在给定显层神经元取值的情况下，对隐神经元进行抽样
-%             h_state = learn.sample(obj.posterior(v_state));
-%         end
-%         
-%         function h_field = posterior(obj,v_state) 
-%             %POSTERIOR 计算后验概率
-%             % 在给定显层神经元取值的情况下，计算隐神经元的激活概率
-%             h_field = learn.sigmoid(obj.foreward(v_state));
-%         end
-%         
-%         function v_state = likelihood_sample(obj,h_state) 
-%             % likelihood_sample 计算似然概率采样
-%             % 在给定隐层神经元取值的情况下，对显神经元进行抽样
-%             v_state = learn.sample(obj.likelihood(h_state));
-%         end
-%         
-%         function v_field = likelihood(obj,h_state) 
-%             % likelihood 计算似然概率
-%             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
-%             v_field = learn.sigmoid(obj.backward(h_state));
-%         end
-        
-%         function y = foreward(obj,x)
-%             y = obj.weight * x + repmat(obj.hidden_bias,1,size(x,2));
-%         end
-%         
-%         function x = backward(obj,y)
-%             x = obj.weight'* y + repmat(obj.visual_bias,1,size(y,2));
-%         end
     end
     
     methods (Access = private)
@@ -170,20 +133,21 @@ classdef GBRBM
             h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
-            v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
+            v_state_1 = v_field_1; % + v_sgma .* randn(size(v_field_1));
             h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
             h_state_1 = learn.sample(h_field_1);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
+            % r_error =  sum(sum((v_state_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
             d_weight = (h_field_0 * (minibatch ./ v_sgma)' - h_field_1 * (v_state_1 ./ v_sgma)') / N;
             d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
             d_v_bias = ((minibatch - v_state_1) ./ (v_sgma.^2)) * ones(N,1) / N;
             
             d_v_sgma1 = (((minibatch - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
-            d_v_sgma2 = ((h_state_0 * (minibatch ./ (v_sgma.^2))') .* obj.weight)' * ones(N,1) / N;
+            d_v_sgma2 = ((h_state_0 * (minibatch ./ (v_sgma.^2))') .* obj.weight)' * ones(obj.num_hidden,1) / N;
             d_v_sgma3 = (((v_state_1 - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
-            d_v_sgma4 = ((h_state_1 * (v_state_1 ./ (v_sgma.^2))') .* obj.weight)' * ones(N,1) / N;
+            d_v_sgma4 = ((h_state_1 * (v_state_1 ./ (v_sgma.^2))') .* obj.weight)' * ones(obj.num_hidden,1) / N;
             d_v_sgma = (d_v_sgma1 - d_v_sgma2) - (d_v_sgma3 - d_v_sgma4);
         end
         
@@ -192,7 +156,7 @@ classdef GBRBM
             obj.weight = 0.01 * randn(size(obj.weight));
             obj.visual_bias = mean(train_data,2);
             obj.hidden_bias = zeros(size(obj.hidden_bias));
-            obj.visual_sgma = std(train_data,0,2);
+            obj.visual_sgma = ones(size(obj.visual_sgma));
         end
     end
     
@@ -221,11 +185,46 @@ classdef GBRBM
             
             gbrbm = learn.GBRBM(D,100);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,1e-6,1e-3,1e6);
+            gbrbm = gbrbm.pretrain(data,1e-6,1e-3,1e-4,1e6);
             
             recon_data = dewhitening * gbrbm.reconstruct(trwhitening * Z) + AVE_X;
             
             e = 1;
+        end
+        
+         function [gbrbm,e] = unit_test2()
+            clear all;
+            close all;
+            rng(1);
+            
+            data = [1:10; 10:-1:1]'; D = 10;
+            data = repmat(data,1,1,500); N = 500;
+            gbrbm = learn.GBRBM(D,60);
+            gbrbm = gbrbm.initialize(data);
+            gbrbm = gbrbm.pretrain(data,1e-8,1e-2,1e-4,1e6);
+            
+            data = reshape(data,D,[]);
+            recon_data = gbrbm.reconstruct(data);
+            e = sum(sum((recon_data - data).^2)) / N;
+         end
+        
+         function [gbrbm,e] = unit_test3()
+            clear all;
+            close all;
+            rng(1);
+            
+            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            [D,S,M] = size(data); data = data * 255;
+     
+            gbrbm = learn.GBRBM(D,500);
+            gbrbm = gbrbm.initialize(data);
+            gbrbm = gbrbm.pretrain(data,1e-8,1e-2,1e-4,1e6);
+            
+            save('gbrbm.mat','gbrbm');
+         
+            data = reshape(data,D,[]);
+            recon_data = gbrbm.reconstruct(data);
+            e = sum(sum((recon_data - data).^2)) / N;
         end
     end
     
