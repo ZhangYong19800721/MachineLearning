@@ -3,11 +3,12 @@ classdef GBRBM
     % 显层神经元为线性神经元加高斯噪声，隐层神经元为伯努利二值神经元
     
     properties
-        num_hidden; % 隐藏神经元的个数
-        num_visual; % 可见神经元的个数
-        weight;     % 权值矩阵(num_hidden * num_visual)
+        num_hidden;  % 隐藏神经元的个数
+        num_visual;  % 可见神经元的个数
+        weight;      % 权值矩阵(num_hidden * num_visual)
         hidden_bias; % 隐藏神经元的偏置
         visual_bias; % 可见神经元的偏置
+        visual_sgma; % 可见神经元加性高斯噪声标准差
     end
     
     methods
@@ -17,6 +18,7 @@ classdef GBRBM
             obj.weight = zeros(obj.num_hidden,obj.num_visual);
             obj.hidden_bias = zeros(obj.num_hidden,1);
             obj.visual_bias = zeros(obj.num_visual,1);
+            obj.visual_sgma = ones(obj.num_visual,1);
         end
     end
     
@@ -32,25 +34,19 @@ classdef GBRBM
         
         function obj = initialize(obj,minibatchs) 
             %initialize 基于训练数据（由多个minibatch组成的训练数据集合）初始化权值矩阵，隐神经元偏置和显神经元偏置
-            %           minibatchs 是一个元胞数组。
+            %           minibatchs 是一个[D,S,M]维的数组。
            
-            minibatch_num = length(minibatchs);
-            minibatch_ave = zeros(size(minibatchs{1}));
-            
-            for n = 1:minibatch_num
-                minibatch_ave = minibatch_ave + minibatchs{n};
-            end
-            
-            minibatch_ave = minibatch_ave ./ minibatch_num;
-            obj = obj.initialize_weight(minibatch_ave);
+            [D,S,M] = size(minibatchs);
+            minibatchs = reshape(minibatchs,D,[]);
+            obj = obj.initialize_weight(minibatchs);
         end
 
         function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
-            minibatch_num = length(minibatchs); % 得到minibatch的个数
-            ob_window_size = minibatch_num;     % 设定观察窗口的大小为
+            [D,S,M] = size(minibatchs); % 得到minibatch的个数
+            ob_window_size = M;     % 设定观察窗口的大小为
             ob_var_num = 1;                     % 设定观察变量的个数
             ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
@@ -58,14 +54,15 @@ classdef GBRBM
             v_weight = zeros(size(obj.weight));
             v_h_bias = zeros(size(obj.hidden_bias));
             v_v_bias = zeros(size(obj.visual_bias));
+            v_v_sgma = zeros(size(obj.visual_sgma));
             
             % 初始化动量倍率为0.5
             momentum = 0.5;
             
             r_error_list = zeros(1,ob_window_size);
-            for idx = 1:minibatch_num  % 初始化重建误差列表的移动平均值
-                minibatch = minibatchs{idx};
-                [~, ~, ~, r_error] = obj.CD1(minibatch);
+            for idx = 1:M  % 初始化重建误差列表的移动平均值
+                minibatch = minibatchs(:,:,idx);
+                [~, ~, ~, ~, r_error] = obj.CD1(minibatch);
                 r_error_list(idx) = r_error;
             end
             r_error_ave_old = mean(r_error_list);
@@ -74,14 +71,14 @@ classdef GBRBM
             learn_rate = learn_rate_max; %初始化学习速度
             
             for it = 0:max_it
-                minibatch_idx = mod(it,minibatch_num)+1;  % 取一个minibatch
-                minibatch = minibatchs{minibatch_idx};
+                minibatch_idx = mod(it,M)+1;  % 取一个minibatch
+                minibatch = minibatchs(:,:,minibatch_idx);
                 
-                [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch);
+                [d_weight, d_h_bias, d_v_bias, d_v_sgma, r_error] = obj.CD1(minibatch);
                 r_error_list(minibatch_idx) = r_error;
                 r_error_ave_new = mean(r_error_list);
                 
-                if minibatch_idx == minibatch_num % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
+                if minibatch_idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if r_error_ave_new > r_error_ave_old
                         learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
@@ -101,10 +98,13 @@ classdef GBRBM
                 v_weight = momentum * v_weight + learn_rate * d_weight;
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
+                v_v_sgma = momentum * v_v_sgma + learn_rate * d_v_sgma;
                 
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
+                obj.visual_sgma = obj.visual_sgma + v_v_sgma;
+                obj.visual_sgma(obj.visual_sgma <= 0.001) = 0.001;
             end
         end
         
@@ -152,7 +152,7 @@ classdef GBRBM
     end
     
     methods (Access = private)
-        function [d_weight,d_h_bias,d_v_bias,r_error] = CD1(obj, minibatch)
+        function [d_weight,d_h_bias,d_v_bias,d_v_sgma,r_error] = CD1(obj, minibatch)
             % 使用Contrastive Divergence 1 (CD1)方法对约束玻尔兹曼RBM机进行快速训练
             % 输入：
             %   minibatch，一组训练数据，一列代表一个训练样本，列数表示训练样本的个数
@@ -165,26 +165,34 @@ classdef GBRBM
             N = size(minibatch,2); % 训练样本的个数
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
+            v_sgma = repmat(obj.visual_sgma,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
+            h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
-            v_field_1 = obj.weight'* h_state_0 + v_bias;
-            v_state_1 = v_field_1 + randn(size(v_field_1));
-            h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
-            % h_state_1 = learn.sample(h_field_1);
+            v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
+            v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
+            h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
+            h_state_1 = learn.sample(h_field_1);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
-            d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
+            d_weight = (h_field_0 * (minibatch ./ v_sgma)' - h_field_1 * (v_state_1 ./ v_sgma)') / N;
             d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
-            d_v_bias = (minibatch - v_state_1) * ones(N,1) / N;
+            d_v_bias = ((minibatch - v_state_1) ./ (v_sgma.^2)) * ones(N,1) / N;
+            
+            d_v_sgma1 = (((minibatch - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
+            d_v_sgma2 = ((h_state_0 * (minibatch ./ (v_sgma.^2))') .* obj.weight)' * ones(N,1) / N;
+            d_v_sgma3 = (((v_state_1 - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
+            d_v_sgma4 = ((h_state_1 * (v_state_1 ./ (v_sgma.^2))') .* obj.weight)' * ones(N,1) / N;
+            d_v_sgma = (d_v_sgma1 - d_v_sgma2) - (d_v_sgma3 - d_v_sgma4);
         end
         
         function obj = initialize_weight(obj,train_data)
             %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.
             obj.weight = 0.01 * randn(size(obj.weight));
-            obj.visual_bias = sum(train_data,2) / size(train_data,2);
+            obj.visual_bias = mean(train_data,2);
             obj.hidden_bias = zeros(size(obj.hidden_bias));
+            obj.visual_sgma = std(train_data,0,2);
         end
     end
     
@@ -193,9 +201,7 @@ classdef GBRBM
             clear all;
             close all;
             rng(1);
-            
-            %[data,~,~,~] = learn.import_mnist('./+learn/mnist.mat'); data = 255 * data;
-            
+                
             D = 10; N = 1e5; S = 100; M = 1000;
             MU = 1:D; SIGMA = 10*rand(D); SIGMA = SIGMA * SIGMA';
             data = mvnrnd(MU,SIGMA,N)';
@@ -210,37 +216,14 @@ classdef GBRBM
             trwhitening =    sqrt(N-1)  * P * diag(sqrt(DK)) * P';
             dewhitening = (1/sqrt(N-1)) * P * diag(sqrt(ZK)) * P';
             
-%             image = reshape(dewhitening * trwhitening * data(:,1,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,2,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,3,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,4,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,5,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,6,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,7,1),28,28)'; imshow(uint8(image));
-%             image = reshape(dewhitening * trwhitening * data(:,8,1),28,28)'; imshow(uint8(image));
-            
             data = trwhitening * Z;
             data = reshape(data,D,S,M); 
             
-            for minibatch_idx = 1:M
-                mnist{minibatch_idx} = data(:,:,minibatch_idx);
-            end
-            
             gbrbm = learn.GBRBM(D,100);
-            gbrbm = gbrbm.initialize(mnist);
-            gbrbm = gbrbm.pretrain(mnist,1e-6,1e-4,1e6);
+            gbrbm = gbrbm.initialize(data);
+            gbrbm = gbrbm.pretrain(data,1e-6,1e-3,1e6);
             
             recon_data = dewhitening * gbrbm.reconstruct(trwhitening * Z) + AVE_X;
-            
-%             image = reshape(recon_data(:,1),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,2),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,3),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,4),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,5),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,6),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,7),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,8),28,28)'; imshow(uint8(image));
-%             image = reshape(recon_data(:,9),28,28)'; imshow(uint8(image));
             
             e = 1;
         end
