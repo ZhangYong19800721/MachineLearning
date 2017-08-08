@@ -89,7 +89,8 @@ classdef RBM
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
-                v_weight = momentum * v_weight + learn_rate * d_weight;
+                weigth_cost = 1e-4;
+                v_weight = momentum * v_weight + learn_rate * (d_weight - weigth_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
                 
@@ -160,7 +161,8 @@ classdef RBM
             h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = learn.sigmoid(obj.weight'* h_state_0 + v_bias);
-            v_state_1 = learn.sample(v_field_1);
+            %v_state_1 = learn.sample(v_field_1);
+            v_state_1 = v_field_1; % 此处不做采样，可增加精度，与Hinton的程序相同
             h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
@@ -186,7 +188,7 @@ classdef RBM
             clear all;
             close all;
             [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(data);
+            [D,S,M] = size(data); N = S * M;
      
             rbm = learn.RBM(D,500);
             rbm = rbm.initialize(data);
