@@ -29,27 +29,19 @@ classdef RBM
             obj.visual_bias = visual_bias;
         end
         
-        function obj = initialize(obj,minibatchs,visual_bias,hidden_bias) 
-            %initialize 基于训练数据（由多个minibatch组成的训练数据集合）初始化权值矩阵，隐神经元偏置和显神经元偏置
-            %           minibatchs 是一个元胞数组。
-           
-            minibatch_num = length(minibatchs);
-            minibatch_sum = zeros(size(minibatchs{1}));
-            
-            for n = 1:minibatch_num
-                minibatch_sum = minibatch_sum + minibatchs{n};
-            end
-            
-            minibatch_sum = minibatch_sum ./ minibatch_num;
-            obj = obj.initialize_weight(minibatch_sum,visual_bias,hidden_bias);
+        function obj = initialize(obj,minibatchs) 
+            %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.   
+            [D,S,M] = size(minibatchs);
+            minibatchs = reshape(minibatchs,D,[]);
+            obj = obj.initialize_weight(minibatchs);
         end
 
         function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,max_it) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
-            minibatch_num = length(minibatchs); % 得到minibatch的个数
-            ob_window_size = minibatch_num;     % 设定观察窗口的大小为
+            [D,S,M] = size(minibatchs); % 得到minibatch的个数
+            ob_window_size = M;     % 设定观察窗口的大小为
             ob_var_num = 1;                     % 设定观察变量的个数
             ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
             
@@ -62,8 +54,8 @@ classdef RBM
             momentum = 0.5;
             
             r_error_list = zeros(1,ob_window_size);
-            for idx = 1:minibatch_num  % 初始化重建误差列表的移动平均值
-                minibatch = minibatchs{idx};
+            for idx = 1:M  % 初始化重建误差列表的移动平均值
+                minibatch = minibatchs(:,:,idx);
                 [~, ~, ~, r_error] = obj.CD1(minibatch);
                 r_error_list(idx) = r_error;
             end
@@ -73,14 +65,14 @@ classdef RBM
             learn_rate = learn_rate_max; %初始化学习速度
             
             for it = 0:max_it
-                minibatch_idx = mod(it,minibatch_num)+1;  % 取一个minibatch
-                minibatch = minibatchs{minibatch_idx};
+                minibatch_idx = mod(it,M)+1;  % 取一个minibatch
+                minibatch = minibatchs(:,:,minibatch_idx);
                 
                 [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch);
                 r_error_list(minibatch_idx) = r_error;
                 r_error_ave_new = mean(r_error_list);
                 
-                if minibatch_idx == minibatch_num % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
+                if minibatch_idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if r_error_ave_new > r_error_ave_old
                         learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
@@ -178,14 +170,14 @@ classdef RBM
             d_v_bias = (minibatch - v_state_1) * ones(N,1) / N;
         end
         
-        function obj = initialize_weight(obj,train_data,visual_bias,hidden_bias)
+        function obj = initialize_weight(obj,train_data)
             %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.
             obj.weight = 0.01 * randn(size(obj.weight));
-            x = sum(train_data,2) / size(train_data,2);
-            x(x<=0) = x(x<=0) + 10.^visual_bias;
-            x(x>=1) = x(x>=1) - 10.^visual_bias;
-            obj.visual_bias = log(x./(1-x));
-            obj.hidden_bias = hidden_bias * ones(size(obj.hidden_bias));
+            obj.visual_bias = mean(train_data,2);
+            obj.visual_bias = log(obj.visual_bias./(1-obj.visual_bias));
+            obj.visual_bias(obj.visual_bias < -100) = -100;
+            obj.visual_bias(obj.visual_bias > +100) = +100;
+            obj.hidden_bias = zeros(size(obj.hidden_bias));
         end
     end
     
@@ -194,31 +186,16 @@ classdef RBM
             clear all;
             close all;
             [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(data); N = S*M;
-            
-            for minibatch_idx = 1:M
-                mnist{minibatch_idx} = data(:,:,minibatch_idx);
-            end
-            
+            [D,S,M] = size(data);
+     
             rbm = learn.RBM(D,500);
-            rbm = rbm.initialize(mnist,-6,0);
-            rbm = rbm.pretrain(mnist,1e-6,1e-1,1e5);
+            rbm = rbm.initialize(data);
+            rbm = rbm.pretrain(data,1e-6,1e-1,1e5);
             
-            %save('rbm.mat','rbm');
-            
+            save('rbm.mat','rbm');
+         
             data = reshape(data,D,[]);
             recon_data = rbm.reconstruct(data);
-            image = reshape(recon_data(:,1),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,2),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,3),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,4),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,5),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,6),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,7),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,8),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,9),28,28)'; imshow(uint8(255*image));
-            image = reshape(recon_data(:,10),28,28)'; imshow(uint8(255*image));
-            
             e = sum(sum((255*recon_data - 255*data).^2)) / N;
         end
     end
