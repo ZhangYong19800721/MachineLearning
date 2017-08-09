@@ -24,10 +24,10 @@ for minibatch_idx = 1:M
 end
 
 parameters.v_var = 1;
-parameters.epsilonw_vng = 0.01;
+parameters.epsilonw_vng = 1e-3;
 parameters.std_rate = 1000;
-parameters.maxepoch  = 1000;
-parameters.PreWts.vhW = randn(D,100);
+parameters.max_it  = 1e6;
+parameters.PreWts.vhW = 0.01*randn(D,100);
 parameters.PreWts.hb  = zeros(1,100);
 parameters.PreWts.vb  = zeros(1,D);
 parameters.nHidNodes  = 100;
@@ -38,4 +38,4 @@ parameters.final_momen = 0.9;
 parameters.wtcost = 0;
 parameters.SPARSE = 0;
 
-[weight,visual_bias,hidden_bias,fvar,errs] = learn.GaussianRBM(mnist,parameters);
+[weight,visual_bias,hidden_bias] = learn.GaussianRBM(mnist,parameters);
