@@ -97,7 +97,7 @@ classdef GBRBM
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
-                obj.visual_sgma = obj.visual_sgma + 0*v_v_sgma;
+                obj.visual_sgma = obj.visual_sgma + v_v_sgma;
                 obj.visual_sgma(obj.visual_sgma <= 5e-3) = 5e-3;
             end
         end
@@ -134,7 +134,7 @@ classdef GBRBM
             h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
-            v_state_1 = v_field_1; % + v_sgma .* randn(size(v_field_1));
+            v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
             h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
             h_state_1 = learn.sample(h_field_1);
             
@@ -197,11 +197,12 @@ classdef GBRBM
             close all;
             rng(1);
             
-            data = [1:10; 10:-1:1]'; D = 10;
-            data = repmat(data,1,1,500); N = 500;
+            data = [1:10; 10:-1:1]'; D = 10; S = 2; M = 500;
+            data = repmat(data,1,1,500); N = S * M;
+            
             gbrbm = learn.GBRBM(D,60);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,[1e-8,1e-2],1e-4,1e6);
+            gbrbm = gbrbm.pretrain(data,[1e-6,1e-2],1e-5,1e6);
             
             data = reshape(data,D,[]);
             recon_data = gbrbm.reconstruct(data);
@@ -240,13 +241,14 @@ classdef GBRBM
             
             gbrbm = learn.GBRBM(D,500);
             gbrbm = gbrbm.initialize(whiten_data);
-            gbrbm = gbrbm.pretrain(whiten_data,[1e-8,1e-2],1e-4,1e6);
+            gbrbm = gbrbm.pretrain(whiten_data,[1e-8,1e-2],0,1e6);
             
             save('gbrbm.mat','gbrbm');
          
-            data = reshape(data,D,[]);
-            recon_data = gbrbm.reconstruct(data);
-            e = sum(sum((recon_data - data).^2)) / N;
+            whiten_data = reshape(whiten_data,D,[]);
+            recon_whiten_data = gbrbm.reconstruct(whiten_data);
+            recon_data = R * recon_whiten_data + repmat(A,1,size(recon_whiten_data,2));
+            e = sum(sum((recon_data - data).^2)) / (S*M);
         end
     end
     
