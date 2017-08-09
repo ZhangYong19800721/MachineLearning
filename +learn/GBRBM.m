@@ -33,7 +33,7 @@ classdef GBRBM
             obj = obj.initialize_weight(minibatchs);
         end
 
-        function obj = pretrain(obj,minibatchs,learn_rate_min,learn_rate_max,learn_sgma,max_it) 
+        function obj = pretrain(obj,minibatchs,learn_rate,learn_sgma,max_it) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
@@ -60,7 +60,8 @@ classdef GBRBM
             r_error_ave_old = mean(r_error_list);
             ob = ob.initialize(r_error_ave_old);
             
-            learn_rate = learn_rate_max; %初始化学习速度
+            learn_rate_min = min(learn_rate);
+            learn_rate     = max(learn_rate);  %初始化学习速度
             
             for it = 0:max_it
                 minibatch_idx = mod(it,M)+1;  % 取一个minibatch
@@ -109,7 +110,7 @@ classdef GBRBM
             
             h_field_0 = learn.sigmoid(obj.weight * (x ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
-            y = obj.weight'* h_state_0 + v_bias;
+            y = v_sgma .* (obj.weight'* h_state_0) + v_bias;
         end
         
     end
@@ -133,12 +134,11 @@ classdef GBRBM
             h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
-            v_state_1 = v_field_1; % + v_sgma .* randn(size(v_field_1));
+            v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
             h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
             h_state_1 = learn.sample(h_field_1);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
-            % r_error =  sum(sum((v_state_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
             d_weight = (h_field_0 * (minibatch ./ v_sgma)' - h_field_1 * (v_state_1 ./ v_sgma)') / N;
             d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
@@ -201,7 +201,7 @@ classdef GBRBM
             data = repmat(data,1,1,500); N = 500;
             gbrbm = learn.GBRBM(D,60);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,1e-8,1e-2,1e-4,1e6);
+            gbrbm = gbrbm.pretrain(data,[1e-8,1e-2],1e-4,1e6);
             
             data = reshape(data,D,[]);
             recon_data = gbrbm.reconstruct(data);
@@ -218,7 +218,7 @@ classdef GBRBM
      
             gbrbm = learn.GBRBM(D,500);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,1e-8,1e-2,1e-4,1e6);
+            gbrbm = gbrbm.pretrain(data,[1e-8,1e-2],1e-4,1e6);
             
             save('gbrbm.mat','gbrbm');
          
