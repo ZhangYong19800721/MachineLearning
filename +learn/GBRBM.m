@@ -97,7 +97,7 @@ classdef GBRBM
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
-                obj.visual_sgma = obj.visual_sgma + v_v_sgma;
+                obj.visual_sgma = obj.visual_sgma + 0*v_v_sgma;
                 obj.visual_sgma(obj.visual_sgma <= 5e-3) = 5e-3;
             end
         end
@@ -134,7 +134,7 @@ classdef GBRBM
             h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
-            v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
+            v_state_1 = v_field_1; % + v_sgma .* randn(size(v_field_1));
             h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
             h_state_1 = learn.sample(h_field_1);
             
@@ -213,12 +213,34 @@ classdef GBRBM
             close all;
             rng(1);
             
-            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(data); data = data * 255;
-     
+            [data,label,test_data,test_label] = learn.import_mnist('./+learn/mnist.mat');
+            [D,S,M] = size(data); data = data * 255; data = reshape(data,D,[]);
+            [W,R,A] = learn.whiten(data);
+            
+            whiten_data = W * (data - repmat(A,1,size(data,2)));
+            ave_whiten_data = mean(whiten_data,2);
+            std_whiten_data = std(whiten_data,0,2);
+            
+            dewhiten_data = R * whiten_data + repmat(A,1,size(whiten_data,2));
+            dewhiten_data = uint8(dewhiten_data);
+            
+            imshow(reshape(dewhiten_data(:,1),28,28)');
+            imshow(reshape(dewhiten_data(:,2),28,28)');
+            imshow(reshape(dewhiten_data(:,3),28,28)');
+            imshow(reshape(dewhiten_data(:,4),28,28)');
+            imshow(reshape(dewhiten_data(:,5),28,28)');
+            imshow(reshape(dewhiten_data(:,6),28,28)');
+            imshow(reshape(dewhiten_data(:,7),28,28)');
+            imshow(reshape(dewhiten_data(:,8),28,28)');
+            imshow(reshape(dewhiten_data(:,9),28,28)');
+            imshow(reshape(dewhiten_data(:,10),28,28)');
+            w_err = sum(sum(abs(dewhiten_data - uint8(data))))/(S*M);
+            
+            whiten_data = reshape(whiten_data,D,S,M);
+            
             gbrbm = learn.GBRBM(D,500);
-            gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,[1e-8,1e-2],1e-4,1e6);
+            gbrbm = gbrbm.initialize(whiten_data);
+            gbrbm = gbrbm.pretrain(whiten_data,[1e-8,1e-2],1e-4,1e6);
             
             save('gbrbm.mat','gbrbm');
          
