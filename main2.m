@@ -1,32 +1,13 @@
 clear all;
 close all;
-rng(1);
+rng('shuffle');
 
-[data,~,~,~] = learn.import_mnist('./+learn/mnist.mat'); 
-[D,S,M] = size(data); 
-batchs = zeros(S,D,M);
+D = 10; N = 1e6; S = 100; M = N/S;
+MU = 1:D; SIGMA = 10*rand(D); SIGMA = SIGMA * SIGMA';
+data = mvnrnd(MU,SIGMA,N)';
 
-for m = 1:M
-    batchs(:,:,m) = data(:,:,m)';
-end
+data(1,:) = repmat(5.5,1,N);
 
-batchs = batchs * 255;
+[W,D,A] = learn.whiten(data);
 
-clear data;
-
-parameters.v_var = 1;
-parameters.epsilonw_vng = 0.01;
-parameters.std_rate = 1000;
-parameters.maxepoch  = 1000;
-parameters.PreWts.vhW = randn(D,500);
-parameters.PreWts.hb  = zeros(1,500);
-parameters.PreWts.vb  = zeros(1,D);
-parameters.nHidNodes  = 500;
-parameters.nCD = 1;
-parameters.init_final_momen_iter = 60;
-parameters.init_momen = 0.5;
-parameters.final_momen = 0.9;
-parameters.wtcost = 0;
-parameters.SPARSE = 0;
-
-[weight,visual_bias,hidden_bias,fvar,errs] = learn.GaussianRBM(batchs,parameters);
+new_data = W * (data - repmat(A,1,N));
