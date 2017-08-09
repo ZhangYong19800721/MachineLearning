@@ -92,7 +92,7 @@ classdef GBRBM
                 v_weight = momentum * v_weight + learn_rate * (d_weight - weigth_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias; 
-                v_v_sgma = momentum * v_v_sgma + learn_sgma * d_v_sgma;
+                v_v_sgma = momentum * v_v_sgma + learn_rate * learn_sgma * d_v_sgma;
                 
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
@@ -202,7 +202,7 @@ classdef GBRBM
             
             gbrbm = learn.GBRBM(D,60);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,[1e-6,1e-2],1e-5,1e6);
+            gbrbm = gbrbm.pretrain(data,[1e-6,1e-2],1e-2,1e6);
             
             data = reshape(data,D,[]);
             recon_data = gbrbm.reconstruct(data);
