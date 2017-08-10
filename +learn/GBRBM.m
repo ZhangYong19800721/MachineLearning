@@ -33,7 +33,7 @@ classdef GBRBM
             obj = obj.initialize_weight(minibatchs);
         end
 
-        function obj = pretrain(obj,minibatchs,learn_rate,learn_sgma,max_it) 
+        function obj = pretrain(obj,minibatchs,parameters) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
@@ -60,10 +60,10 @@ classdef GBRBM
             r_error_ave_old = mean(r_error_list);
             ob = ob.initialize(r_error_ave_old);
             
-            learn_rate_min = min(learn_rate);
-            learn_rate     = max(learn_rate);  %初始化学习速度
+            learn_rate_min = min(parameters.learn_rate);
+            learn_rate     = max(parameters.learn_rate);  %初始化学习速度
             
-            for it = 0:max_it
+            for it = 0:parameters.max_it
                 minibatch_idx = mod(it,M)+1;  % 取一个minibatch
                 minibatch = minibatchs(:,:,minibatch_idx);
                 
@@ -88,11 +88,10 @@ classdef GBRBM
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
-                weigth_cost = 1e-4;
-                v_weight = momentum * v_weight + learn_rate * (d_weight - weigth_cost * obj.weight);
+                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weigth_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias; 
-                v_v_sgma = momentum * v_v_sgma + learn_rate * learn_sgma * d_v_sgma;
+                v_v_sgma = momentum * v_v_sgma + learn_rate * parameters.learn_sgma * d_v_sgma;
                 
                 obj.weight      = obj.weight      + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
@@ -204,7 +203,13 @@ classdef GBRBM
             
             gbrbm = learn.GBRBM(D,60);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,[1e-6,1e-2],1e-2,1e6);
+            
+            parameters.learn_rate = [1e-6,1e-2];
+            parameters.learn_sgma = 1e-2;
+            parameters.weight_cost = 1e-4;
+            parameters.max_it = 1e6;
+
+            gbrbm = gbrbm.pretrain(data,parameters);
             
             data = reshape(data,D,[]);
             recon_data = gbrbm.reconstruct(data);
@@ -223,7 +228,13 @@ classdef GBRBM
             
             gbrbm = learn.GBRBM(D,500);
             gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,[1e-8,1e-4],1e-2,1e6);
+            
+            parameters.learn_rate = [1e-8,1e-4];
+            parameters.learn_sgma = 1e-2;
+            parameters.weight_cost = 1e-4;
+            parameters.max_it = 1e6;
+            
+            gbrbm = gbrbm.pretrain(data,parameters);
             
             save('gbrbm.mat','gbrbm');
          
