@@ -14,7 +14,7 @@ nucleotide = reshape(nucleotide,D,S,M);
 gbrbm = learn.GBRBM(D,1024);
 gbrbm = gbrbm.initialize(nucleotide);
 
-parameters.learn_rate = [1e-10,1e-3];
+parameters.learn_rate = [1e-10,1e-4];
 parameters.learn_sgma = 1e-2;
 parameters.weight_cost = 1e-4;
 parameters.max_it = 1e6;
