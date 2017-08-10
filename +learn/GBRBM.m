@@ -156,7 +156,9 @@ classdef GBRBM
             obj.weight = 0.01 * randn(size(obj.weight));
             obj.visual_bias = mean(train_data,2);
             obj.hidden_bias = zeros(size(obj.hidden_bias));
-            obj.visual_sgma = ones(size(obj.visual_sgma));
+            obj.visual_sgma = std(train_data,0,2);
+            obj.visual_sgma(obj.visual_sgma <= 5e-3) = 5e-3;
+            obj.visual_sgma(obj.visual_sgma >= 1   ) = 1;
         end
     end
     
