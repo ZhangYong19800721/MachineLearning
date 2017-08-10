@@ -36,7 +36,7 @@ classdef RBM
             obj = obj.initialize_weight(minibatchs);
         end
 
-        function obj = pretrain(obj,minibatchs,learn_rate,weight_cost,max_it) 
+        function obj = pretrain(obj,minibatchs,parameters) 
             %pretrain 对权值进行预训练
             % 使用CD1快速算法对权值进行预训练
             
@@ -62,10 +62,10 @@ classdef RBM
             r_error_ave_old = mean(r_error_list);
             ob = ob.initialize(r_error_ave_old);
             
-            learn_rate_min = min(learn_rate);
-            learn_rate     = max(learn_rate); %初始化学习速度
+            learn_rate_min = min(parameters.learn_rate);
+            learn_rate     = max(parameters.learn_rate); %初始化学习速度
             
-            for it = 0:max_it
+            for it = 0:parameters.max_it
                 minibatch_idx = mod(it,M)+1;  % 取一个minibatch
                 minibatch = minibatchs(:,:,minibatch_idx);
                 
@@ -91,7 +91,7 @@ classdef RBM
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 
-                v_weight = momentum * v_weight + learn_rate * (d_weight - weight_cost * obj.weight);
+                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
                 
@@ -193,7 +193,11 @@ classdef RBM
      
             rbm = learn.RBM(D,500);
             rbm = rbm.initialize(data);
-            rbm = rbm.pretrain(data,[1e-6,1e-1],1e-4,1e5);
+            
+            parameters.learn_rate = [1e-6,1e-2];
+            parameters.weight_cost = 1e-4;
+            parameters.max_it = 1e5;
+            rbm = rbm.pretrain(data,parameters);
             
             save('rbm.mat','rbm');
          
