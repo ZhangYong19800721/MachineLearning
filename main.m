@@ -7,12 +7,10 @@ load('nucleotides.mat');
 shuffle_idx = randperm(N);
 nucleotide = nucleotide(:,shuffle_idx);
 
-nucleotide = nucleotide ./ max(max(nucleotide));
+S = 100; M = floor(N / S); N = S*M;
+nucleotide = nucleotide(:,1:(S*M));
 
-minibatch_size = 100;
-minibatch_num  = floor(N / minibatch_size);
-
-for minibatch_idx = 1:minibatch_num
+for minibatch_idx = 1:M
     star_col = (minibatch_idx-1)*minibatch_size + 1;
     stop_col = (minibatch_idx-1)*minibatch_size + minibatch_size;
     points{minibatch_idx} = nucleotide(:,star_col:stop_col);
