@@ -88,7 +88,7 @@ classdef GBRBM
                 ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
-                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weigth_cost * obj.weight);
+                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias; 
                 v_v_sgma = momentum * v_v_sgma + learn_rate * parameters.learn_sgma * d_v_sgma;
