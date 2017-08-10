@@ -8,17 +8,12 @@ shuffle_idx = randperm(N);
 nucleotide = nucleotide(:,shuffle_idx);
 
 S = 100; M = floor(N / S); N = S*M;
-nucleotide = nucleotide(:,1:(S*M));
-
-for minibatch_idx = 1:M
-    star_col = (minibatch_idx-1)*minibatch_size + 1;
-    stop_col = (minibatch_idx-1)*minibatch_size + minibatch_size;
-    points{minibatch_idx} = nucleotide(:,star_col:stop_col);
-end
-
-clear nucleotide;
+nucleotide = nucleotide(:,1:N);
+nucleotide = reshape(nucleotide,D,S,M);
 
 % configure = [8688,1024,64];
-rbm = learn.RestrictedBoltzmannMachine(D,1024);
-rbm = rbm.initialize(points,-100,-4);
-rbm = rbm.pretrain(points,1e-5,1e-1,1e6);
+gbrbm = learn.GBRBM(D,1024);
+gbrbm = gbrbm.initialize(nucleotide);
+gbrbm = gbrbm.pretrain(nucleotide,[1e-8,1e-4],1e-2,1e6);
+
+save('gbrbm_nucleotide.mat','gbrbm');
