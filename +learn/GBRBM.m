@@ -73,7 +73,7 @@ classdef GBRBM
                 
                 if minibatch_idx == M % 当所有的minibatch被轮讯了一遍的时候（到达观察窗口最右边的时候）
                     if r_error_ave_new > r_error_ave_old
-                        learn_rate = learn_rate / 2;
+                        learn_rate = learn_rate / 5;
                         if learn_rate < learn_rate_min
                             break;
                         end
@@ -216,38 +216,17 @@ classdef GBRBM
             
             [data,label,test_data,test_label] = learn.import_mnist('./+learn/mnist.mat');
             [D,S,M] = size(data); data = data * 255; data = reshape(data,D,[]);
-            [W,R,A] = learn.whiten(data);
-            
-            whiten_data = W * (data - repmat(A,1,size(data,2)));
-            ave_whiten_data = mean(whiten_data,2);
-            std_whiten_data = std(whiten_data,0,2);
-            
-            dewhiten_data = R * whiten_data + repmat(A,1,size(whiten_data,2));
-            dewhiten_data = uint8(dewhiten_data);
-            
-            imshow(reshape(dewhiten_data(:,1),28,28)');
-            imshow(reshape(dewhiten_data(:,2),28,28)');
-            imshow(reshape(dewhiten_data(:,3),28,28)');
-            imshow(reshape(dewhiten_data(:,4),28,28)');
-            imshow(reshape(dewhiten_data(:,5),28,28)');
-            imshow(reshape(dewhiten_data(:,6),28,28)');
-            imshow(reshape(dewhiten_data(:,7),28,28)');
-            imshow(reshape(dewhiten_data(:,8),28,28)');
-            imshow(reshape(dewhiten_data(:,9),28,28)');
-            imshow(reshape(dewhiten_data(:,10),28,28)');
-            w_err = sum(sum(abs(dewhiten_data - uint8(data))))/(S*M);
-            
-            whiten_data = reshape(whiten_data,D,S,M);
+     
+            data = reshape(data,D,S,M);
             
             gbrbm = learn.GBRBM(D,500);
-            gbrbm = gbrbm.initialize(whiten_data);
-            gbrbm = gbrbm.pretrain(whiten_data,[1e-8,1e-2],0,1e6);
+            gbrbm = gbrbm.initialize(data);
+            gbrbm = gbrbm.pretrain(data,[1e-8,1e-4],1e-2,1e6);
             
             save('gbrbm.mat','gbrbm');
          
-            whiten_data = reshape(whiten_data,D,[]);
-            recon_whiten_data = gbrbm.reconstruct(whiten_data);
-            recon_data = R * recon_whiten_data + repmat(A,1,size(recon_whiten_data,2));
+            data = reshape(data,D,[]);
+            recon_data = gbrbm.reconstruct(data);
             e = sum(sum((recon_data - data).^2)) / (S*M);
         end
     end
