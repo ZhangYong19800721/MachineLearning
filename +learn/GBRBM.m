@@ -144,9 +144,9 @@ classdef GBRBM
             d_v_bias = ((minibatch - v_state_1) ./ (v_sgma.^2)) * ones(N,1) / N;
             
             d_v_sgma1 = (((minibatch - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
-            d_v_sgma2 = ((h_state_0 * (minibatch ./ (v_sgma.^2))') .* obj.weight)' * ones(obj.num_hidden,1) / N;
+            d_v_sgma2 = (minibatch ./ (v_sgma.^2)) .* (obj.weight' * h_field_0) * ones(N,1) / N;
             d_v_sgma3 = (((v_state_1 - v_bias).^2) ./ (v_sgma.^3)) * ones(N,1) / N;
-            d_v_sgma4 = ((h_state_1 * (v_state_1 ./ (v_sgma.^2))') .* obj.weight)' * ones(obj.num_hidden,1) / N;
+            d_v_sgma4 = (v_state_1 ./ (v_sgma.^2)) .* (obj.weight' * h_field_1) * ones(N,1) / N;
             d_v_sgma = (d_v_sgma1 - d_v_sgma2) - (d_v_sgma3 - d_v_sgma4);
         end
         
