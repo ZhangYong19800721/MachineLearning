@@ -66,17 +66,18 @@ classdef StackedRBM
             b_state = state{1}.v_state;
         end
         
-        function obj = pretrain(obj,minibatchs,init_visual_bias,init_hidden_bias,learn_rate_min,learn_rate_max,max_it)
+        function obj = pretrain(obj,minibatchs,parameters)
             %pretrain 预训练
             % 使用CD1快速算法，逐层训练约束玻尔兹曼机（RBM）
-            layer_num = length(obj.rbm_layers);
+            K = length(obj.rbm_layers);
+            [D,S,M] = size(minibatchs);
             
-            for layer_idx = 1:layer_num
-                obj.rbm_layers{layer_idx} = obj.rbm_layers{layer_idx}.initialize(minibatchs,init_visual_bias,init_hidden_bias); % 初始化第layer_idx层的RBM
-                obj.rbm_layers{layer_idx} = obj.rbm_layers{layer_idx}.pretrain(minibatchs,learn_rate_min,learn_rate_max,max_it); % 训练第layer_idx层的RBM
-                for minibatch_idx = 1:length(minibatchs) %将训练数据映射到上一层
-                    minibatchs{minibatch_idx} = obj.rbm_layers{layer_idx}.posterior(minibatchs{minibatch_idx});
-                end
+            for k = 1:K
+                obj.rbm_layers{k} = obj.rbm_layers{k}.initialize(minibatchs); % 初始化第layer_idx层的RBM
+                obj.rbm_layers{k} = obj.rbm_layers{k}.pretrain(minibatchs,parameters); % 训练第layer_idx层的RBM
+                minibatchs = reshape(minibatchs,obj.rbm_layers{k}.num_visual,[]);
+                minibatchs = obj.rbm_layers{k}.posterior(minibatchs);
+                minibatchs = reshape(minibatchs,obj.rbm_layers{k}.num_hidden,S,M);
             end
         end
         

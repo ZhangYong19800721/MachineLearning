@@ -86,8 +86,8 @@ classdef RBM
                 description = strcat('重建误差:',num2str(r_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                % disp(description);
-                ob = ob.showit(r_error_ave_new,description);
+                disp(description);
+                %ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 
