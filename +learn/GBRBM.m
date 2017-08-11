@@ -84,8 +84,8 @@ classdef GBRBM
                 description = strcat('重建误差:',num2str(r_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                % disp(description);
-                ob = ob.showit(r_error_ave_new,description);
+                disp(description);
+                %ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight);
@@ -162,38 +162,7 @@ classdef GBRBM
     end
     
     methods(Static)
-        function [gbrbm,e] = unit_test()
-            clear all;
-            close all;
-            rng(1);
-                
-            D = 10; N = 1e5; S = 100; M = 1000;
-            MU = 1:D; SIGMA = 10*rand(D); SIGMA = SIGMA * SIGMA';
-            data = mvnrnd(MU,SIGMA,N)';
-            X = data; AVE_X = repmat(mean(X,2),1,N);
-            Z = double(X) - AVE_X;
-            Y = Z*Z';
-            [P,ZK] = eig(Y); 
-            ZK=diag(ZK); 
-            ZK(ZK<=0)=0;
-            DK=ZK; DK(ZK>0)=1./(ZK(ZK>0)); 
-            
-            trwhitening =    sqrt(N-1)  * P * diag(sqrt(DK)) * P';
-            dewhitening = (1/sqrt(N-1)) * P * diag(sqrt(ZK)) * P';
-            
-            data = trwhitening * Z;
-            data = reshape(data,D,S,M); 
-            
-            gbrbm = learn.GBRBM(D,100);
-            gbrbm = gbrbm.initialize(data);
-            gbrbm = gbrbm.pretrain(data,1e-6,1e-3,1e-4,1e6);
-            
-            recon_data = dewhitening * gbrbm.reconstruct(trwhitening * Z) + AVE_X;
-            
-            e = 1;
-        end
-        
-         function [gbrbm,e] = unit_test2()
+         function [gbrbm,e] = unit_test1()
             clear all;
             close all;
             rng(1);
@@ -216,12 +185,12 @@ classdef GBRBM
             e = sum(sum((recon_data - data).^2)) / N;
          end
         
-         function [gbrbm,e] = unit_test3()
+         function [gbrbm,e] = unit_test2()
             clear all;
             close all;
             rng(1);
             
-            [data,label,test_data,test_label] = learn.import_mnist('./+learn/mnist.mat');
+            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
             [D,S,M] = size(data); data = data * 255; data = reshape(data,D,[]);
      
             data = reshape(data,D,S,M);
@@ -241,6 +210,41 @@ classdef GBRBM
             data = reshape(data,D,[]);
             recon_data = gbrbm.reconstruct(data);
             e = sum(sum((recon_data - data).^2)) / (S*M);
+         end
+        
+         function [gbrbm,e] = unit_test3()
+            clear all;
+            close all;
+            rng(1);
+            
+            [mnist,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            [D,S,M] = size(mnist); mnist = mnist * 255; mnist = reshape(mnist,D,[]);
+            
+            [W,R,A] = learn.whiten(mnist);
+            data = W * (mnist - repmat(A,1,size(mnist,2)));
+            data = 10 * data;
+            
+            ave_data = mean(data,2);
+            std_data = std(data,0,2);
+            
+            data = reshape(data,D,S,M);
+            
+            gbrbm = learn.GBRBM(D,500);
+            gbrbm = gbrbm.initialize(data);
+            
+            parameters.learn_rate = [1e-8,1e-4];
+            parameters.learn_sgma = 1e-2;
+            parameters.weight_cost = 1e-4;
+            parameters.max_it = 1e6;
+            
+            gbrbm = gbrbm.pretrain(data,parameters);
+            save('gbrbm.mat','gbrbm');
+         
+            data = reshape(data,D,[]);
+            recon_data = gbrbm.reconstruct(data);
+            recon_data = recon_data / 10;
+            recon_mnist = R * recon_data + repmat(A,1,size(recon_data,2));
+            e = sum(sum((recon_mnist - mnist).^2)) / (S*M);
         end
     end
     
