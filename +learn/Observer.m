@@ -5,17 +5,15 @@ classdef Observer
     properties
         handle;
         window;
-        legend;
         index;
         list;
         num;
     end
     
     methods
-        function obj = Observer(name,num,window,legend)
+        function obj = Observer(name,num,window)
             obj.handle = figure('Name',name); grid on;
             obj.window = window;
-            obj.legend = legend;
             obj.num = num;
             obj.list = zeros(obj.num,obj.window);
             obj.index = 0;
