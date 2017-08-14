@@ -41,9 +41,7 @@ classdef RBM
             % 使用CD1快速算法对权值进行预训练
             
             [D,S,M] = size(minibatchs); % 得到minibatch的个数
-            ob_window_size = M;     % 设定观察窗口的大小为
-            ob_var_num = 1;                     % 设定观察变量的个数
-            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            ob = learn.Observer('重建误差',1,M); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight));
@@ -53,14 +51,14 @@ classdef RBM
             % 初始化动量倍率为0.5
             momentum = 0.5;
             
-            r_error_list = zeros(1,ob_window_size);
+            recon_error_list = zeros(1,M);
             for idx = 1:M  % 初始化重建误差列表的移动平均值
                 minibatch = minibatchs(:,:,idx);
                 [~, ~, ~, r_error] = obj.CD1(minibatch);
-                r_error_list(idx) = r_error;
+                recon_error_list(idx) = r_error;
             end
-            r_error_ave_old = mean(r_error_list);
-            ob = ob.initialize(r_error_ave_old);
+            recon_error_ave_old = mean(recon_error_list);
+            ob = ob.initialize(recon_error_ave_old);
             
             learn_rate_min = min(parameters.learn_rate);
             learn_rate     = max(parameters.learn_rate); %初始化学习速度
@@ -70,20 +68,20 @@ classdef RBM
                 minibatch = minibatchs(:,:,minibatch_idx);
                 
                 [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch);
-                r_error_list(minibatch_idx) = r_error;
-                r_error_ave_new = mean(r_error_list);
+                recon_error_list(minibatch_idx) = r_error;
+                recon_error_ave_new = mean(recon_error_list);
                 
                 if minibatch_idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
-                    if r_error_ave_new > r_error_ave_old
+                    if recon_error_ave_new > recon_error_ave_old
                         learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
                             break;
                         end
                     end
-                    r_error_ave_old = r_error_ave_new;
+                    recon_error_ave_old = recon_error_ave_new;
                 end
                 
-                description = strcat('重建误差:',num2str(r_error_ave_new));
+                description = strcat('重建误差:',num2str(recon_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
                 disp(description);
