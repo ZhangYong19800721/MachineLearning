@@ -48,8 +48,7 @@ classdef SoftmaxRBM
             % 使用CD1快速算法对权值进行预训练
             
             [D,S,M] = size(minibatchs); % 得到minibatch的个数
-            ob_var_num = 1;             % 设定观察变量的个数
-            ob = learn.Observer('重建误差',ob_var_num,M,'xxx'); %初始化观察者，观察重建误差
+            ob = learn.Observer('重建误差',1,M); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight      = zeros(size(obj.weight));
@@ -59,39 +58,39 @@ classdef SoftmaxRBM
             % 初始化动量倍率为0.5
             momentum = 0.5;
             
-            r_error_list = zeros(1,M);
-            for idx = 1:M  % 初始化重建误差列表的移动平均值
-                label = labels(:,:,idx);
-                minibatch = minibatchs(:,:,idx);
-                [~, ~, ~, r_error] = obj.CD1(minibatch,label);
-                r_error_list(idx) = r_error;
+            recon_error_list = zeros(1,M);
+            for m = 1:M  % 初始化重建误差列表的移动平均值
+                label = labels(:,:,m);
+                minibatch = minibatchs(:,:,m);
+                [~, ~, ~, recon_error] = obj.CD1(minibatch,label);
+                recon_error_list(m) = recon_error;
             end
-            r_error_ave_old = mean(r_error_list);
-            ob = ob.initialize(r_error_ave_old);
+            recon_error_ave_old = mean(recon_error_list);
+            ob = ob.initialize(recon_error_ave_old);
             
             learn_rate_min = min(parameters.learn_rate);
             learn_rate     = max(parameters.learn_rate); %初始化学习速度
             
             for it = 0:parameters.max_it
-                idx = mod(it,M)+1;  % 取一个minibatch
-                label = labels(:,:,idx);
-                minibatch = minibatchs(:,:,idx);
+                m = mod(it,M)+1;  % 取一个minibatch
+                label = labels(:,:,m);
+                minibatch = minibatchs(:,:,m);
                 
-                [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch,label);
-                r_error_list(idx) = r_error;
-                r_error_ave_new = mean(r_error_list);
+                [d_weight, d_h_bias, d_v_bias, recon_error] = obj.CD1(minibatch,label);
+                recon_error_list(m) = recon_error;
+                recon_error_ave_new = mean(recon_error_list);
                 
-                if idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
-                    if r_error_ave_new > r_error_ave_old
+                if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
+                    if recon_error_ave_new > recon_error_ave_old
                         learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
                             break;
                         end
                     end
-                    r_error_ave_old = r_error_ave_new;
+                    recon_error_ave_old = recon_error_ave_new;
                 end
                 
-                description = strcat('重建误差:',num2str(r_error_ave_new));
+                description = strcat('重建误差:',num2str(recon_error_ave_new));
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
                 disp(description);
