@@ -2,87 +2,84 @@ classdef StackedRBM
 %Stacked Restricted Boltzmann Machine 堆叠玻尔兹曼机   
 %
     properties
-        rbm_layers;
+        rbms;
     end
     
     methods
         function obj = StackedRBM(configure) 
             % DeepBeliefNet 构造函数
-            layer_num = length(configure) - 1;
-            for layer_idx = 1:layer_num
-                obj.rbm_layers{layer_idx} = learn.RBM(configure(layer_idx),configure(layer_idx+1));
+            L = length(configure) - 1;
+            for l = 1:L
+                obj.rbms{l} = learn.RBM(configure(l),configure(l+1));
             end
         end
     end
     
     methods        
-        function h_field = posterior(obj,v_state)
+        function proba = posterior(obj,v_state)
             % posterior 给定显层神经元的取值，计算顶层隐藏神经元的域值
-            h_field = v_state;
-            for layer_idx = 1:length(obj.rbm_layers)
-                h_field = obj.rbm_layers{layer_idx}.posterior(h_field);
+            L = obj.layer_num();
+            
+            proba = v_state;
+            for l = 1:L
+                proba = obj.rbms{l}.posterior(proba);
             end
         end
         
-        function [t_state,state] = posterior_sample(obj,v_state)
+        function state = posterior_sample(obj,v_state)
             % posterior_sample 给定显层神经元的状态，计算顶层隐藏神经元的状态
-            state{1}.v_field = v_state;
-            state{1}.v_state = v_state;
+            L = obj.layer_num();
+            state = cell(1,L+1);
             
-            for layer_idx = 1:length(obj.rbm_layers)
-                state{layer_idx}.h_field = obj.rbm_layers{layer_idx}.posterior(state{layer_idx}.v_state);
-                state{layer_idx}.h_state = ML.sample(state{layer_idx}.h_field);
-                if layer_idx < length(obj.rbm_layers)
-                    state{layer_idx+1}.v_field = state{layer_idx}.h_field;
-                    state{layer_idx+1}.v_state = state{layer_idx}.h_state;
-                end
+            state{1}.proba = v_state;
+            state{1}.state = v_state;
+            
+            for l = 2:(L+1)
+                state{l}.proba = obj.rbms{l-1}.posterior(state{l-1}.state);
+                state{l}.state = learn.sample(state{l}.proba);
             end
-            
-            t_state = state{length(obj.rbm_layers)}.h_state;
         end
         
-        function v_field = likelihood(obj,h_state)
+        function proba = likelihood(obj,h_state)
             % likelihood 给定顶层隐神经元的取值，计算底层显神经元的域值
-            v_field = h_state;
-            for layer_idx = length(obj.rbm_layers):-1:1
-                v_field = obj.rbm_layers{layer_idx}.likelihood(v_field);
+            L = obj.layer_num();
+            
+            proba = h_state;
+            for l = L:-1:1
+                proba = obj.rbms{l}.likelihood(proba);
             end
         end
         
-        function [b_state,state] = likelihood_sample(obj,h_state)
+        function state = likelihood_sample(obj,h_state)
             % likelihood_sample 给定顶层神经元的状态，计算底层隐藏神经元的状态
-            state{length(obj.rbm_layers)}.h_field = h_state;
-            state{length(obj.rbm_layers)}.h_state = h_state;
-
-            for layer_idx = length(obj.rbm_layers):-1:1
-                state{layer_idx}.v_field = obj.rbm_layers{layer_idx}.likelihood(state{layer_idx}.h_state);
-                state{layer_idx}.v_state = ML.sample(state{layer_idx}.v_field);
-                if layer_idx > 1
-                    state{layer_idx-1}.h_field = state{layer_idx}.v_field;
-                    state{layer_idx-1}.h_state = state{layer_idx}.v_state;
-                end
-            end
+            L = obj.layer_num();
             
-            b_state = state{1}.v_state;
+            state{L+1}.proba = h_state;
+            state{L+1}.state = h_state;
+
+            for l = L:-1:1
+                state{l}.proba = obj.rbms{l}.likelihood(state{l+1}.state);
+                state{l}.state = learn.sample(state{l}.proba);
+            end
         end
         
         function obj = pretrain(obj,minibatchs,parameters)
             %pretrain 预训练
             % 使用CD1快速算法，逐层训练约束玻尔兹曼机（RBM）
-            K = length(obj.rbm_layers);
+            L = obj.layer_num();
             [D,S,M] = size(minibatchs);
             
-            for k = 1:K
-                obj.rbm_layers{k} = obj.rbm_layers{k}.initialize(minibatchs); % 初始化第layer_idx层的RBM
-                obj.rbm_layers{k} = obj.rbm_layers{k}.pretrain(minibatchs,parameters); % 训练第layer_idx层的RBM
-                minibatchs = reshape(minibatchs,obj.rbm_layers{k}.num_visual,[]);
-                minibatchs = obj.rbm_layers{k}.posterior(minibatchs);
-                minibatchs = reshape(minibatchs,obj.rbm_layers{k}.num_hidden,S,M);
+            for l = 1:L
+                obj.rbms{l} = obj.rbms{l}.initialize(minibatchs); % 初始化第l层的RBM
+                obj.rbms{l} = obj.rbms{l}.pretrain(minibatchs,parameters); % 训练第l层的RBM
+                minibatchs = reshape(minibatchs,obj.rbms{l}.num_visual,[]);
+                minibatchs = obj.rbms{l}.posterior(minibatchs);
+                minibatchs = reshape(minibatchs,obj.rbms{l}.num_hidden,S,M);
             end
         end
         
         function l = layer_num(obj)
-            l = length(obj.rbm_layers);
+            l = length(obj.rbms);
         end
     end
 end
