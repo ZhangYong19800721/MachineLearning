@@ -73,11 +73,11 @@ classdef DBN
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
                 disp(description);
-                ob = ob.showit(r_error_ave_new,description);
+                ob = ob.showit(recon_error_ave_new,description);
                 
                 % positive phase (wake 阶段)
                 pos_state = obj.stacked_rbm.posterior_sample(minibatch);
-                pos_top_hid_proba = obj.softmax_rbm.posterior([label; pos_state{L+1}.state]);
+                pos_top_hid_proba = obj.softmax_rbm.posterior(label,pos_state{L+1}.state);
                 pos_top_hid_state = learn.sample(pos_top_hid_proba);
                 
                 % CD1
@@ -85,7 +85,7 @@ classdef DBN
                 [neg_top_lab_proba,neg_top_vis_proba] = obj.softmax_rbm.likelihood(neg_top_hid_state);
                 neg_top_lab_state = neg_top_lab_proba;
                 neg_top_vis_state = learn.sample(neg_top_vis_proba);
-                neg_top_hid_proba = obj.softmax_rbm.posterior([neg_top_lab_state; neg_top_vis_state]);
+                neg_top_hid_proba = obj.softmax_rbm.posterior(neg_top_lab_state, neg_top_vis_state);
                 neg_top_hid_state = learn.sample(neg_top_hid_proba);
                 
                 % negative phase (sleep 阶段)
