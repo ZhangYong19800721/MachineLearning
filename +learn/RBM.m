@@ -5,26 +5,29 @@ classdef RBM
     properties
         num_hidden; % 隐藏神经元的个数
         num_visual; % 可见神经元的个数
-        weight;     % 权值矩阵(num_hidden * num_visual)
+        weight_v2h;  % 权值矩阵(num_hidden * num_visual)
+        weight_h2v;  % 权值矩阵(num_hidden * num_visual)
         hidden_bias; % 隐藏神经元的偏置
         visual_bias; % 可见神经元的偏置
     end
     
     methods
         function obj = RBM(num_visual,num_hidden) % 构造函数
-            obj.num_hidden = num_hidden;
-            obj.num_visual = num_visual;
-            obj.weight = zeros(obj.num_hidden,obj.num_visual);
+            obj.num_hidden  = num_hidden;
+            obj.num_visual  = num_visual;
+            obj.weight_v2h  = zeros(obj.num_hidden,obj.num_visual);
+            obj.weight_h2v  = [];
             obj.hidden_bias = zeros(obj.num_hidden,1);
             obj.visual_bias = zeros(obj.num_visual,1);
         end
     end
     
     methods
-        function obj = construct(obj,weight,visual_bias,hidden_bias)
+        function obj = construct(obj,weight_v2h,weight_h2v,visual_bias,hidden_bias)
             %construct 使用权值、隐神经元偏置、显神经元偏置直接构建RBM
-            [obj.num_hidden, obj.num_visual] = size(weight);
-            obj.weight = weight;
+            [obj.num_hidden, obj.num_visual] = size(weight_v2h);
+            obj.weight_v2h = weight_v2h;         
+            obj.weight_h2v = weight_h2v;
             obj.hidden_bias = hidden_bias;
             obj.visual_bias = visual_bias;
         end
@@ -44,7 +47,7 @@ classdef RBM
             ob = learn.Observer('重建误差',1,M); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
-            v_weight = zeros(size(obj.weight));
+            v_weight = zeros(size(obj.weight_v2h));
             v_h_bias = zeros(size(obj.hidden_bias));
             v_v_bias = zeros(size(obj.visual_bias));
             
@@ -89,11 +92,11 @@ classdef RBM
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 
-                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight);
+                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight_v2h);
                 v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
                 v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
                 
-                obj.weight      = obj.weight      + v_weight;
+                obj.weight_v2h  = obj.weight_v2h  + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
                 obj.visual_bias = obj.visual_bias + v_v_bias;
             end
@@ -124,21 +127,24 @@ classdef RBM
         end
         
         function y = foreward(obj,x)
-            y = obj.weight * x + repmat(obj.hidden_bias,1,size(x,2));
+            y = obj.weight_v2h * x + repmat(obj.hidden_bias,1,size(x,2));
         end
         
         function x = backward(obj,y)
-            x = obj.weight'* y + repmat(obj.visual_bias,1,size(y,2));
+            if isempty(obj.weight_h2v)
+                x = obj.weight_v2h'* y + repmat(obj.visual_bias,1,size(y,2));
+            else
+                x = obj.weight_h2v'* y + repmat(obj.visual_bias,1,size(y,2));
+            end
         end
         
         function y = reconstruct(obj,x)
-            N = size(x,2);
-            h_bias = repmat(obj.hidden_bias,1,N);
-            v_bias = repmat(obj.visual_bias,1,N);
-            
-            h_field_0 = learn.sigmoid(obj.weight * x + h_bias);
-            h_state_0 = learn.sample(h_field_0);
-            y = learn.sigmoid(obj.weight'* h_state_0 + v_bias);
+            z = obj.posterior_sample(x);
+            y = obj.likelihood(z);
+        end
+        
+        function obj = weightsync(obj)
+            obj.weight_h2v = obj.weight_v2h;
         end
     end
     
@@ -157,15 +163,12 @@ classdef RBM
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * minibatch + h_bias);
+            h_field_0 = learn.sigmoid(obj.weight_v2h * minibatch + h_bias);
             h_state_0 = learn.sample(h_field_0);
-            v_field_1 = learn.sigmoid(obj.weight'* h_state_0 + v_bias);
-            %v_state_1 = learn.sample(v_field_1);
-            v_state_1 = v_field_1; % 此处不做采样，可增加精度，与Hinton的程序相同
-            h_field_1 = learn.sigmoid(obj.weight * v_state_1 + h_bias);
-            
+            v_field_1 = learn.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
+            v_state_1 = learn.sample(v_field_1); 
+            h_field_1 = learn.sigmoid(obj.weight_v2h * v_state_1 + h_bias);
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
-            
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
             d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
             d_v_bias = (minibatch - v_state_1) * ones(N,1) / N;
@@ -173,7 +176,7 @@ classdef RBM
         
         function obj = initialize_weight(obj,train_data)
             %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.
-            obj.weight = 0.01 * randn(size(obj.weight));
+            obj.weight_v2h = 0.01 * randn(size(obj.weight_v2h));
             obj.visual_bias = mean(train_data,2);
             obj.visual_bias = log(obj.visual_bias./(1-obj.visual_bias));
             obj.visual_bias(obj.visual_bias < -100) = -100;
