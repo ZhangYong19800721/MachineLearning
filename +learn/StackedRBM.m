@@ -81,6 +81,13 @@ classdef StackedRBM
         function l = layer_num(obj)
             l = length(obj.rbms);
         end
+        
+        function obj = weightsync(obj)
+            L = obj.layer_num(); % ²ãÊý
+            for l = 1:L
+                obj.rbms{l} = obj.rbms{l}.weightsync();
+            end
+        end
     end
 end
 
