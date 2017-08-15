@@ -26,7 +26,7 @@ classdef SAE
             % train 训练函数
             % 使用wake-sleep算法进行训练
             
-            [D,S,M] = size(minibatchs);  % D数据维度，S是minibatch的大小，M是minibatch的个数
+            [D,S,M] = size(minibatchs); L = obj.decoder.layer_num(); % D数据维度，S批的大小，M批的个数，L层的个数
             ob = learn.Observer('重建误差',1,M); %初始化观察者用来观察重建误差
                         
             recon_error_list = zeros(1,M);
@@ -39,8 +39,6 @@ classdef SAE
             recon_error_ave_old = mean(recon_error_list); % 计算重建误差的均值
             ob = ob.initialize(recon_error_ave_old);      % 用均值初始化观察者
             
-            L = obj.decoder.layer_num();
-            
             learn_rate_min = min(parameters.learn_rate);
             learn_rate     = max(parameters.learn_rate);  % 将学习速度初始化为最大学习速度
             
@@ -48,18 +46,29 @@ classdef SAE
                 m = mod(it,M) + 1;
                 minibatch = minibatchs(:,:,m);
                 
-                delta = obj.positive_phase(minibatch); % wake
+                pos_state = obj.encoder.posterior_sample(minibatch);
+                neg_state = obj.decoder.likelihood_sample(pos_state{L+1}.state);
+                neg_state{1}.state = neg_state{1}.proba;
+                
                 for l = 1:L
-                    obj.decoder.rbms{l}.weight      = obj.decoder.rbms{l}.weight      + learn_rate * delta{l}.weight;
-                    obj.decoder.rbms{l}.visual_bias = obj.decoder.rbms{l}.visual_bias + learn_rate * delta{l}.bias;
+                    pre_pos_proba{l} = obj.decoder.rbms{l}.likelihood(pos_state{l+1}.state);
+                    pre_neg_proba{l+1} = obj.encoder.rbms{l}.posterior(neg_state{l}.state);
                 end
                 
-                clear delta;
-                
-                delta = obj.negative_phase(minibatch); % sleep
+                % 更新产生权值
                 for l = 1:L
-                    obj.encoder.rbms{l}.weight      = obj.encoder.rbms{l}.weight      + learn_rate * delta{l}.weight;
-                    obj.encoder.rbms{l}.hidden_bias = obj.encoder.rbms{l}.hidden_bias + learn_rate * delta{l}.bias;
+                    obj.decoder.rbms{l}.weight = obj.decoder.rbms{l}.weight + learn_rate * ...
+                        pos_state{l+1}.state * (pos_state{l}.state - pre_pos_proba{l})' / S;
+                    obj.decoder.rbms{l}.visual_bias = obj.decoder.rbms{l}.visual_bias + learn_rate * ...
+                        sum(pos_state{l}.state - pre_pos_proba{l},2) / S;
+                end
+                
+                % 更新识别权值
+                for l = 1:L
+                    obj.encoder.rbms{l}.weight = obj.encoder.rbms{l}.weight + learn_rate * ...
+                        (neg_state{l+1}.state - pre_neg_proba{l+1}) * neg_state{l}.state' / S;
+                    obj.encoder.rbms{l}.hidden_bias = obj.encoder.rbms{l}.hidden_bias + learn_rate * ...
+                        sum(neg_state{l+1}.state - pre_neg_proba{l+1},2) / S;
                 end
                 
                 % 计算重建误差
@@ -104,66 +113,6 @@ classdef SAE
             %REBUILD 给定原数据，通过神经网络后计算其重建数据
             %      
             rebuild_data = obj.decode(obj.encode(data));
-        end
-        
-        function delta = positive_phase(obj,minibatch)
-            %positive_phase wake阶段
-            %   wake训练阶段，encoder的参数不变，调整decoder的参数
-            
-            [D,S] = size(minibatch); % D数据维度，S样本个数
-            L = obj.decoder.layer_num(); % L解码器层数
-            
-            % 对编码器进行抽样
-            state_encoder = obj.encoder.posterior_sample(minibatch); 
-            
-            % 对解码器进行抽样
-            state_decoder{L+1}.state = state_encoder{L+1}.state;
-            for l = L:-1:1  
-                state_decoder{l}.proba = obj.decoder.rbms{l}.likelihood(state_decoder{l+1}.state);
-                state_decoder{l}.state = state_encoder{l}.state;
-            end
-            
-            for l = L:-1:1
-                x = state_decoder{l}.state;
-                y = state_decoder{l}.proba;
-                z = state_decoder{l+1}.state;
-                
-                delta{l}.bias   = sum(x - y,2) / S;
-                delta{l}.weight = z * (x - y)' / S;
-            end
-        end
-        
-        function delta = negative_phase(obj,minibatch)
-            %negative_phase sleep阶段
-            % sleep训练阶段，decoder的参数不变，调整encoder的参数
-            
-            [D,S] = size(minibatch); % D数据维度，S样本个数
-            L = obj.encoder.layer_num(); % L编码器层数
-            
-            % 先计算minibatch的码字
-            code = obj.encoder.posterior_sample(minibatch); 
-            code = code{L+1}.state;
-            
-            % 对解码器进行抽样
-            state_decoder = obj.decoder.likelihood_sample(code); 
-            
-            % 对编码器进行抽样
-            state_encoder = cell(1,L+1);
-            state_encoder{1}.state = state_decoder{1}.proba;
-            for l = 2:(L+1)
-                state_encoder{l}.proba = obj.encoder.rbms{l-1}.posterior(state_encoder{l-1}.state);
-                state_encoder{l}.state = state_decoder{l}.state;
-            end
-            
-            delta = cell(1,L);
-            for l = 1:L
-                x = state_encoder{l+1}.state;
-                y = state_encoder{l+1}.proba;
-                z = state_encoder{l}.state;
-                
-                delta{l}.bias   = sum(x - y,2)    / S;
-                delta{l}.weight = (z * (x - y)')' / S;
-            end
         end
     end
     
