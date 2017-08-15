@@ -120,23 +120,21 @@ classdef SoftmaxRBM
             h_field = learn.sigmoid(obj.weight * v_state + repmat(obj.hidden_bias,1,N));
         end
         
-        function v_state = likelihood_sample(obj,h_state) 
+        function [s_state,v_state] = likelihood_sample(obj,h_state) 
             % likelihood_sample 计算似然概率采样
             % 在给定隐层神经元取值的情况下，对显神经元进行抽样
             v_field = obj.likelihood(h_state);
             s_state = learn.sample_softmax(v_field(1:obj.num_softmax,:));
             v_state = learn.sample(v_field((obj.num_softmax+1):obj.num_visual,:));
-            v_state = [s_state; v_state];
         end
         
-        function v_field = likelihood(obj,h_state) 
+        function [s_field,v_field] = likelihood(obj,h_state) 
             % likelihood 计算似然概率
             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
             N = size(h_state,2);
             v_sigma = obj.weight'* h_state + repmat(obj.visual_bias,1,N);
             s_field = learn.softmax(v_sigma(1:obj.num_softmax,:));
             v_field = learn.sigmoid(v_sigma((obj.num_softmax+1):obj.num_visual,:));
-            v_field = [s_field; v_field];
         end
         
         function y = classify(obj,x)
