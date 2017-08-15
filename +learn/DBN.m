@@ -121,7 +121,8 @@ classdef DBN
         
         function [c,y] = rebuild(obj,s,x)
             x = obj.stacked_rbm.posterior(x);
-            [c,y] = obj.softmax_rbm.rebuild(s,x);
+            [c,z] = obj.softmax_rbm.rebuild(s,x);
+            y = obj.stacked_rbm.likelihood(z);
         end
         
         function y = classify(obj,x)
