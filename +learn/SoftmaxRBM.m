@@ -170,7 +170,7 @@ classdef SoftmaxRBM
             end
         end
         
-        function [c,y] = reconstruct(obj,s,x)
+        function [c,y] = rebuild(obj,s,x)
             z = obj.posterior_sample(s,x);
             [c,y] = obj.likelihood(z);
         end
