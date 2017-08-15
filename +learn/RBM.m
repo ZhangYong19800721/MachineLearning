@@ -55,10 +55,10 @@ classdef RBM
             momentum = 0.5;
             
             recon_error_list = zeros(1,M);
-            for idx = 1:M  % 初始化重建误差列表的移动平均值
-                minibatch = minibatchs(:,:,idx);
+            for m = 1:M  % 初始化重建误差列表的移动平均值
+                minibatch = minibatchs(:,:,m);
                 [~, ~, ~, r_error] = obj.CD1(minibatch);
-                recon_error_list(idx) = r_error;
+                recon_error_list(m) = r_error;
             end
             recon_error_ave_old = mean(recon_error_list);
             ob = ob.initialize(recon_error_ave_old);
