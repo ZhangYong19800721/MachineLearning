@@ -77,9 +77,9 @@ classdef SoftmaxRBM
             
             recon_error_list = zeros(1,M);
             for m = 1:M  % 初始化重建误差列表的移动平均值
-                label = labels(:,:,m);
-                minibatch = minibatchs(:,:,m);
-                [~,~,~,~,~,recon_error] = obj.CD1(minibatch,label);
+                label = labels(:,:,m); minibatch = minibatchs(:,:,m);
+                [recon_label,recon_data] = obj.rebuild(label,minibatch);
+                recon_error = sum(sum(([recon_label;recon_data] - [label;minibatch]).^2)) / S;
                 recon_error_list(m) = recon_error;
             end
             recon_error_ave_old = mean(recon_error_list);
@@ -99,7 +99,7 @@ classdef SoftmaxRBM
                 
                 if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if recon_error_ave_new > recon_error_ave_old
-                        learn_rate = learn_rate / 2;
+                        learn_rate = learn_rate / 10;
                         if learn_rate < learn_rate_min
                             break;
                         end
