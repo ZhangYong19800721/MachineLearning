@@ -43,6 +43,84 @@ classdef DBN
             obj.softmax_rbm = obj.softmax_rbm.pretrain(minibatchs,labels,parameters);
         end
         
+        function obj = train(obj,minibatchs,labels,parameters)
+            %train UP-DOWN训练算法
+            %           
+            [D,S,M] = size(minibatchs); [K,~,~] = size(labels); L = obj.stacked_rbm.layer_num();
+            obj.stacked_rbm_gen = obj.stacked_rbm; % 权值解锁
+            learn_rate_min = min(parameters.learn_rate);
+            learn_rate     = max(parameters.learn_rate);
+            
+            for it = 0:parameters.max_it
+                m = mod(it,M)+1;
+                label = labels(:,:,m);
+                minibatch = minibatchs(:,:,m);
+                
+                if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
+                    if recon_error_ave_new > recon_error_ave_old
+                        learn_rate = learn_rate / 2;
+                        if learn_rate < learn_rate_min
+                            break;
+                        end
+                    end
+                    recon_error_ave_old = recon_error_ave_new;
+                end
+                
+                description = strcat('重建误差:',num2str(recon_error_ave_new));
+                description = strcat(description,strcat('迭代次数:',num2str(it)));
+                description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
+                disp(description);
+                %ob = ob.showit(r_error_ave_new,description);
+                
+                % positive phase (wake 阶段)
+                pos_state = obj.stacked_rbm.posterior_sample(minibatch);
+                pos_top_hid_proba = obj.softmax_rbm.posterior([label; pos_state{L+1}.state]);
+                pos_top_hid_state = learn.sample(pos_top_hid_proba);
+                
+                % CD1
+                neg_top_hid_state = pos_top_hid_state;
+                [neg_top_lab_proba,neg_top_vis_proba] = obj.softmax_rbm.likelihood(neg_top_hid_state);
+                neg_top_lab_state = neg_top_lab_proba;
+                neg_top_vis_state = learn.sample(neg_top_vis_proba);
+                neg_top_hid_proba = obj.softmax_rbm.posterior([neg_top_lab_state; neg_top_vis_state]);
+                neg_top_hid_state = learn.sample(neg_top_hid_proba);
+                
+                % negative phase (sleep 阶段)
+                neg_state = obj.stacked_rbm_gen.likelihood_sample(neg_top_vis_state);
+                neg_state{1}.state = neg_state{1}.proba;
+                
+                % prediction
+                for l = L:-1:1
+                    pre_neg_proba{l+1} = obj.stacked_rbm.rbms{l}.posterior(neg_state{l}.state);
+                    pre_pos_proba{l} = obj.stacked_rbm_gen.rbms{l}.likelihood(pos_state{l+1}.state);
+                end
+                
+                % 更新产生权值
+                for l = 1:L
+                    obj.stacked_rbm_gen.rbms{l}.weight = obj.stacked_rbm_gen.rbms{l}.weight + learn_rate * ...
+                        pos_state{l+1}.state * (pos_state{l}.state - pre_pos_proba{l})' / S;
+                    obj.stacked_rbm_gen.rbms{l}.visual_bias = obj.stacked_rbm_gen.rbms{l}.visual_bias + learn_rate * ...
+                        sum(pos_state{l}.state - pre_pos_proba{l},2) / S; 
+                end
+                
+                % 更新顶层权值
+                obj.softmax_rbm.weight = obj.softmax_rbm.weight + learn_rate * ...
+                    (pos_top_hid_state * [label; pos_state{L+1}.state]' - neg_top_hid_state * [neg_top_lab_state; neg_top_vis_state]') / S;
+                obj.softmax_rbm.visual_bias = obj.softmax_rbm.visual_bias + learn_rate * ...
+                    sum([label;pos_state{L+1}.state] - [neg_top_lab_state;neg_top_vis_state],2) / S;
+                obj.softmax_rbm.hidden_bias = obj.softmax_rbm.hidden_bias + learn_rate * ...
+                    sum(pos_top_hid_state - neg_top_hid_state,2) / S;
+                
+                % 更新识别权值
+                for l = 1:L
+                    obj.stacked_rbm.rbms{l}.weight = obj.stacked_rbm.rbms{l}.weight + learn_rate * ...
+                        (neg_state{l+1}.state - pre_neg_proba{l+1}) * neg_state{l}.state' / S;
+                    obj.stacked_rbm.rbms{l}.hidden_bias = obj.stacked_rbm.rbms{l}.hidden_bias + learn_rate * ...
+                        sum(neg_state{l+1}.state - pre_neg_proba{l+1},2) / S;
+                end
+            end
+        end
+        
         function y = classify(obj,x)
             x = obj.stacked_rbm.posterior(x);
             y = obj.softmax_rbm.classify(x);
@@ -67,10 +145,16 @@ classdef DBN
             parameters.max_it = 1e6;
             dbn = dbn.pretrain(train_images,train_labels,parameters);
             
-            save('dbn.mat','dbn');
+            %load('dbn.mat');
+            save('dbn_pretrain.mat','dbn');
             
             y = dbn.classify(test_images);
-            e = sum(y~=test_labels') / length(y);
+            error1 = sum(y~=test_labels') / length(y);
+            
+            dbn = dbn.train(train_images,train_labels,parameters);
+            save('dbn_train.mat','dbn');
+            y = dbn.classify(test_images);
+            error2 = sum(y~=test_labels') / length(y);
         end
     end
 end

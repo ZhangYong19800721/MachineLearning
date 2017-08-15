@@ -166,7 +166,8 @@ classdef RBM
             h_field_0 = learn.sigmoid(obj.weight_v2h * minibatch + h_bias);
             h_state_0 = learn.sample(h_field_0);
             v_field_1 = learn.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
-            v_state_1 = learn.sample(v_field_1); 
+            %v_state_1 = learn.sample(v_field_1); 
+            v_state_1 = v_field_1; 
             h_field_1 = learn.sigmoid(obj.weight_v2h * v_state_1 + h_bias);
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
