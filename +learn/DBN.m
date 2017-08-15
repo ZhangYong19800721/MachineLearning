@@ -61,7 +61,7 @@ classdef DBN
                 
                 if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if recon_error_ave_new > recon_error_ave_old
-                        learn_rate = learn_rate / 2;
+                        learn_rate = learn_rate / 10;
                         if learn_rate < learn_rate_min
                             break;
                         end
