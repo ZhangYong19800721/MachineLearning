@@ -57,8 +57,9 @@ classdef RBM
             recon_error_list = zeros(1,M);
             for m = 1:M  % 初始化重建误差列表的移动平均值
                 minibatch = minibatchs(:,:,m);
-                [~, ~, ~, r_error] = obj.CD1(minibatch);
-                recon_error_list(m) = r_error;
+                recon_data = obj.rebuild(minibatch);
+                recon_error = sum(sum((recon_data - minibatch).^2)) / S;
+                recon_error_list(m) = recon_error;
             end
             recon_error_ave_old = mean(recon_error_list);
             ob = ob.initialize(recon_error_ave_old);
@@ -70,13 +71,13 @@ classdef RBM
                 minibatch_idx = mod(it,M)+1;  % 取一个minibatch
                 minibatch = minibatchs(:,:,minibatch_idx);
                 
-                [d_weight, d_h_bias, d_v_bias, r_error] = obj.CD1(minibatch);
-                recon_error_list(minibatch_idx) = r_error;
+                [d_weight, d_h_bias, d_v_bias, recon_error] = obj.CD1(minibatch);
+                recon_error_list(minibatch_idx) = recon_error;
                 recon_error_ave_new = mean(recon_error_list);
                 
                 if minibatch_idx == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if recon_error_ave_new > recon_error_ave_old
-                        learn_rate = learn_rate / 2;
+                        learn_rate = learn_rate / 10;
                         if learn_rate < learn_rate_min
                             break;
                         end
@@ -138,7 +139,7 @@ classdef RBM
             end
         end
         
-        function y = reconstruct(obj,x)
+        function y = rebuild(obj,x)
             z = obj.posterior_sample(x);
             y = obj.likelihood(z);
         end
