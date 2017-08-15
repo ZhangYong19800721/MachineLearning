@@ -1,32 +1,20 @@
-classdef SAE
+classdef SAE < learn.StackedRBM
     %STACKED AUTO ENCODER 栈式自动编码器
     %   
     
-    properties
-        encoder;
-        decoder;
-    end
-    
     methods
-        function obj = SAE(configure) 
-            % 构造函数
-            obj.encoder = learn.StackedRBM(configure);
-            obj.decoder = obj.encoder;
+        function obj = SAE(configure) % 构造函数
+            obj@learn.StackedRBM(configure); % 调用父类的构造函数
         end
     end
     
     methods
-        function obj = pretrain(obj,minibatchs,parameters) 
-            %pretrain 使用CD1快速算法，逐层训练
-            obj.encoder = obj.encoder.pretrain(minibatchs,parameters); % 对encoder进行预训练
-            obj.decoder = obj.encoder; % 将decoder初始化为与encoder相同（权值解锁）
-        end
-        
         function obj = train(obj,minibatchs,parameters) 
             % train 训练函数
-            % 使用wake-sleep算法进行训练
+            % 使用UPDOWN算法进行训练
+            obj = obj.weightsync(); % 权值同步（解锁）
             
-            [D,S,M] = size(minibatchs); L = obj.decoder.layer_num(); % D数据维度，S批的大小，M批的个数，L层的个数
+            [D,S,M] = size(minibatchs); L = obj.layer_num(); % D数据维度，S批的大小，M批的个数，L层的个数
             ob = learn.Observer('重建误差',1,M); %初始化观察者用来观察重建误差
                         
             recon_error_list = zeros(1,M);
@@ -46,28 +34,28 @@ classdef SAE
                 m = mod(it,M) + 1;
                 minibatch = minibatchs(:,:,m);
                 
-                pos_state = obj.encoder.posterior_sample(minibatch);
-                neg_state = obj.decoder.likelihood_sample(pos_state{L+1}.state);
+                pos_state = obj.posterior_sample(minibatch);
+                neg_state = obj.likelihood_sample(pos_state{L+1}.state);
                 neg_state{1}.state = neg_state{1}.proba;
                 
-                for l = 1:L
-                    pre_pos_proba{l} = obj.decoder.rbms{l}.likelihood(pos_state{l+1}.state);
-                    pre_neg_proba{l+1} = obj.encoder.rbms{l}.posterior(neg_state{l}.state);
+                for l = L:-1:1
+                    pre_pos_proba{l  } = obj.rbms{l}.likelihood(pos_state{l+1}.state);
+                    pre_neg_proba{l+1} = obj.rbms{l}.posterior (neg_state{l  }.state);
                 end
                 
                 % 更新产生权值
                 for l = 1:L
-                    obj.decoder.rbms{l}.weight = obj.decoder.rbms{l}.weight + learn_rate * ...
+                    obj.rbms{l}.weight_h2v = obj.rbms{l}.weight_h2v + learn_rate * ...
                         pos_state{l+1}.state * (pos_state{l}.state - pre_pos_proba{l})' / S;
-                    obj.decoder.rbms{l}.visual_bias = obj.decoder.rbms{l}.visual_bias + learn_rate * ...
+                    obj.rbms{l}.visual_bias = obj.rbms{l}.visual_bias + learn_rate * ...
                         sum(pos_state{l}.state - pre_pos_proba{l},2) / S;
                 end
                 
                 % 更新识别权值
                 for l = 1:L
-                    obj.encoder.rbms{l}.weight = obj.encoder.rbms{l}.weight + learn_rate * ...
+                    obj.rbms{l}.weight_v2h = obj.rbms{l}.weight_v2h + learn_rate * ...
                         (neg_state{l+1}.state - pre_neg_proba{l+1}) * neg_state{l}.state' / S;
-                    obj.encoder.rbms{l}.hidden_bias = obj.encoder.rbms{l}.hidden_bias + learn_rate * ...
+                    obj.rbms{l}.hidden_bias = obj.rbms{l}.hidden_bias + learn_rate * ...
                         sum(neg_state{l+1}.state - pre_neg_proba{l+1},2) / S;
                 end
                 
@@ -99,14 +87,14 @@ classdef SAE
         function code = encode(obj,data)
             %ENCODE 给定数据，计算其编码 
             %
-            data = obj.encoder.posterior(data);
+            data = obj.posterior(data);
             code = learn.sample(data);
         end
         
         function data = decode(obj,code)
             %DECODE 给定编码，计算其数据
             %   
-            data = obj.decoder.likelihood(code);
+            data = obj.likelihood(code);
         end
         
         function rebuild_data = rebuild(obj,data)
