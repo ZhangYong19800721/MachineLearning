@@ -61,7 +61,7 @@ classdef DBN
                 
                 if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if recon_error_ave_new > recon_error_ave_old
-                        learn_rate = learn_rate / 10;
+                        learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
                             break;
                         end
@@ -83,8 +83,8 @@ classdef DBN
                 % CD1
                 neg_top_hid_state = pos_top_hid_state;
                 [neg_top_lab_proba,neg_top_vis_proba] = obj.softmax_rbm.likelihood(neg_top_hid_state);
-                neg_top_lab_state = neg_top_lab_proba;
-                neg_top_vis_state = learn.sample(neg_top_vis_proba);
+                neg_top_lab_state = learn.sample_softmax(neg_top_lab_proba);
+                neg_top_vis_state = neg_top_vis_proba;
                 neg_top_hid_proba = obj.softmax_rbm.posterior(neg_top_lab_state, neg_top_vis_state);
                 neg_top_hid_state = learn.sample(neg_top_hid_proba);
                 
@@ -105,8 +105,8 @@ classdef DBN
                 end
                 
                 % 更新顶层权值
-                obj.softmax_rbm.weight_s2h   = obj.softmax_rbm.weight_s2h   + learn_rate * (pos_top_hid_state * label'                - neg_top_hid_state * neg_top_lab_state') / S;
-                obj.softmax_rbm.weight_v2h   = obj.softmax_rbm.weight_v2h   + learn_rate * (pos_top_hid_state * pos_state{L+1}.state' - neg_top_hid_state * neg_top_vis_state') / S;
+                obj.softmax_rbm.weight_s2h   = obj.softmax_rbm.weight_s2h   + learn_rate * (       pos_top_hid_state  * label'                -        neg_top_hid_state  * neg_top_lab_state') / S;
+                obj.softmax_rbm.weight_v2h   = obj.softmax_rbm.weight_v2h   + learn_rate * (double(pos_top_hid_state) * pos_state{L+1}.state' - double(neg_top_hid_state) * neg_top_vis_state') / S;
                 obj.softmax_rbm.softmax_bias = obj.softmax_rbm.softmax_bias + learn_rate * sum(label                - neg_top_lab_state,2) / S;
                 obj.softmax_rbm.visual_bias  = obj.softmax_rbm.visual_bias  + learn_rate * sum(pos_state{L+1}.state - neg_top_vis_state,2) / S;
                 obj.softmax_rbm.hidden_bias  = obj.softmax_rbm.hidden_bias  + learn_rate * sum(pos_top_hid_state    - neg_top_hid_state,2) / S;
