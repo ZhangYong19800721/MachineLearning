@@ -99,7 +99,7 @@ classdef SoftmaxRBM
                 
                 if m == M % 当所有的minibatch被轮讯了一篇的时候（到达观察窗口最右边的时候）
                     if recon_error_ave_new > recon_error_ave_old
-                        learn_rate = learn_rate / 10;
+                        learn_rate = learn_rate / 2;
                         if learn_rate < learn_rate_min
                             break;
                         end
@@ -214,7 +214,7 @@ classdef SoftmaxRBM
             h_state_0 = learn.sample(h_field_0);
             [s_field_1,v_field_1] = obj.likelihood(h_state_0);
             s_state_1 = learn.sample_softmax(s_field_1);
-            v_state_1 = learn.sample(v_field_1);
+            v_state_1 = v_field_1;
             h_field_1 = obj.posterior(s_state_1,v_state_1); 
             
             recon_error =  sum(sum(([s_field_1;v_field_1] - [label;minibatch]).^2)) / N; %计算在整个train_data上的平均reconstruction error
@@ -251,6 +251,8 @@ classdef SoftmaxRBM
         function [srbm,e] = unit_test()
             clear all;
             close all;
+            rng(1);
+            
             [data,~,test_data,test_label] = learn.import_mnist('./+learn/mnist.mat');
             [D,S,M] = size(data); N = S * M; K = 10;
             label = eye(10); label = repmat(label,1,10,M);
