@@ -8,10 +8,10 @@ sae = learn.SAE(configure);
 
 parameters.learn_rate = [1e-6,1e-2];
 parameters.weight_cost = 1e-4;
-parameters.max_it = 1e0;
+parameters.max_it = 1e6;
 sae = sae.pretrain(data,parameters);
-% save('sae_mnist_pretrain.mat','sae');
-load('sae_mnist_pretrain.mat');
+save('sae_mnist_pretrain.mat','sae');
+% load('sae_mnist_pretrain.mat');
 
 data = reshape(data,D,[]);
 recon_data1 = sae.rebuild(data);

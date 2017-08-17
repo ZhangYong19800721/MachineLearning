@@ -1,7 +1,7 @@
 function [x1,y1] = ConjugateGradient(F,x0,epsilon1,epsilon2,max_it,reset,dis)
 %CONJUGATEGRADIENT 共轭梯度法
 %   
-    ob = learn.Observer('目标函数值',1,100,'xxx');
+    ob = learn.Observer('目标函数值',1,100);
     x1 = x0; y1 = F.object(x0); % 起始点为x0,并计算初始的目标函数值 
     g1 = F.gradient(x1); % 计算x1处的梯度（此时x1=x0）
     d1 = -g1; % 初始搜索方向为负梯度方向
