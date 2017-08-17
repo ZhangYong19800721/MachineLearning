@@ -18,11 +18,11 @@ classdef StackedRBM
     methods        
         function proba = posterior(obj,v_state)
             % posterior 给定显层神经元的取值，计算顶层隐藏神经元的域值
-            L = obj.layer_num();
+            L = obj.layer_num(); proba = cell(1,L);
             
-            proba = v_state;
+            proba{1} = v_state;
             for l = 1:L
-                proba = obj.rbms{l}.posterior(proba);
+                proba{l+1} = obj.rbms{l}.posterior(proba{l});
             end
         end
         
@@ -44,9 +44,9 @@ classdef StackedRBM
             % likelihood 给定顶层隐神经元的取值，计算底层显神经元的域值
             L = obj.layer_num();
             
-            proba = h_state;
+            proba{L+1} = h_state;
             for l = L:-1:1
-                proba = obj.rbms{l}.likelihood(proba);
+                proba{l} = obj.rbms{l}.likelihood(proba{l+1});
             end
         end
         
