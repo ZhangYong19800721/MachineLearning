@@ -13,7 +13,7 @@ sae = learn.SAE(configure);
 
 parameters.learn_rate = [1e-6,1e-2];
 parameters.weight_cost = 1e-4;
-parameters.max_it = 1e0;
+parameters.max_it = 1e6;
 sae = sae.pretrain(nucleotide,parameters);
             
 nucleotide = reshape(nucleotide,D,[]);
@@ -22,4 +22,4 @@ recon_nucleotide = recon_nucleotide > 0.5;
 
 error = sum(sum((nucleotide - recon_nucleotide).^2)) / N;
 
-save('sae_DAN.mat','sae');
+save('sae_pretrained_DAN.mat','sae');
