@@ -1,6 +1,6 @@
-classdef ConjugateGradientBP
-    % ConjugateGradientBP 感知器的训练类
-    % 使用Conjugate Gradient BP算法训练(共轭梯度反向传播算法)
+classdef CGBPL
+    % CGBPL 配合训练PerceptionL感知器的训练类
+    % 使用共轭梯度反向传播算法
     
     properties
         points;
@@ -9,7 +9,7 @@ classdef ConjugateGradientBP
     end
     
     methods % 构造函数
-        function obj = ConjugateGradientBP(points,labels,percep)
+        function obj = CGBPL(points,labels,percep)
             obj.points = points;
             obj.labels = labels;
             obj.percep = percep;

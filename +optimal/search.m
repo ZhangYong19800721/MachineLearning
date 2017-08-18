@@ -1,6 +1,6 @@
-function lamda = GoldenSection(F,x,d,a,b,epsilon)
-%GoldenSection 此处显示有关此函数的摘要
-%   此处显示详细说明
+function lamda = search(F,x,d,a,b,epsilon)
+%search 使用黄金分割法进行线搜索
+%   
     g = (sqrt(5)-1)/2;
     a0 = a; alfa0 = a + (1 - g)*(b - a);
     alfa = a + (1 - g)*(b - a);

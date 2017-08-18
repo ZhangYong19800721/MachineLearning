@@ -1,6 +1,6 @@
-classdef LevenbergMarquardtBP
-    % LevenbergMarquardtBP 感知器的训练类
-    % 使用Levenberg Marquardt BP算法训练
+classdef LMBPL
+    % LMBPL 配合训练PerceptionL感知器的训练类
+    % 使用Levenberg Marquardt BP算法
     
     properties
         points;
@@ -9,7 +9,7 @@ classdef LevenbergMarquardtBP
     end
     
     methods % 构造函数
-        function obj = LevenbergMarquardtBP(points,labels,percep)
+        function obj = LMBPL(points,labels,percep)
             obj.points = points;
             obj.labels = labels;
             obj.percep = percep;

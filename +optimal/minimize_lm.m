@@ -1,4 +1,4 @@
-function [x1,z1] = LevenbergMarquardt(F,x0,epsilon,max_it)
+function [x1,z1] = minimize_lm(F,x0,epsilon,max_it)
 %LevenbergMarquardt 一种求解最小二乘问题的数值算法
 %   是一种改进的高斯牛顿法，它的搜索方向介于高斯牛顿方向和最速下降方向之间
 

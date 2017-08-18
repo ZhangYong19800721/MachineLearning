@@ -1,6 +1,6 @@
 classdef PerceptionS
     %PERCEPTIONS 感知器
-    %   
+    %  最后一层输出为sigmoid神经元
     
     properties
         weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中[P,1]

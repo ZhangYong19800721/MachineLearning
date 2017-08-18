@@ -1,6 +1,6 @@
-classdef Perception
-    %PERCEPTION 感知器
-    %   
+classdef PerceptionL
+    %PERCEPTIONL 感知器
+    % 最后一层输出为线性神经元
     
     properties
         weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中[P,1]
@@ -13,7 +13,7 @@ classdef Perception
     end
     
     methods % 构造函数
-        function obj = Perception(configure)
+        function obj = PerceptionL(configure)
             % Perception 构造函数
             M = length(configure) - 1;
             obj.num_hidden{1} = configure(2);

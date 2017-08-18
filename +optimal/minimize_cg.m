@@ -1,5 +1,5 @@
-function [x1,y1] = ConjugateGradient(F,x0,epsilon1,epsilon2,max_it,reset,dis)
-%CONJUGATEGRADIENT 共轭梯度法
+function [x1,y1] = minimize_cg(F,x0,epsilon1,epsilon2,max_it,reset,dis)
+%minimize_cg 共轭梯度法
 %   
     ob = learn.Observer('目标函数值',1,100);
     x1 = x0; y1 = F.object(x0); % 起始点为x0,并计算初始的目标函数值 
