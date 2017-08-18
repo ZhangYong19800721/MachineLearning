@@ -11,12 +11,10 @@ classdef SAE < learn.StackedRBM
     methods
         function obj = train(obj,minibatchs,parameters)
             switch parameters.case
-                case 1
+                case 1 % 全抽样的情况
                     obj = obj.train_case1(minibatchs,parameters);
-                case 2
+                case 2 % 无抽样的情况
                     obj = obj.train_case2(minibatchs,parameters);
-                case 3
-                    % 顶抽样的情况
                 otherwise
                     error('parameters.case的值错误！')
             end
@@ -52,7 +50,7 @@ classdef SAE < learn.StackedRBM
     methods(Access = private)
         function obj = train_case1(obj,minibatchs,parameters) 
             % train 训练函数
-            % 使用UPDOWN算法进行训练，有抽样
+            % 使用UPDOWN算法进行训练，全抽样
             obj = obj.weightsync(); % 权值同步（解锁）
             
             [D,S,M] = size(minibatchs); L = obj.layer_num(); % D数据维度，S批的大小，M批的个数，L层的个数
@@ -242,23 +240,20 @@ classdef SAE < learn.StackedRBM
             load('sae_mnist_pretrain.mat');
             
             data = reshape(data,D,[]);
-            recon_data_sample1 = sae.rebuild(data,'sample');
-            error_sample1 = sum(sum((recon_data_sample1 - data).^2)) / N;
-            recon_data_nosample1 = sae.rebuild(data,'nosample');
-            error_nosample1 = sum(sum((recon_data_nosample1 - data).^2)) / N;
+            recon_data1 = sae.rebuild(data,'sample');
+            error1 = sum(sum((recon_data1 - data).^2)) / N
             
             data = reshape(data,D,S,M);
             parameters.max_it = 1e6;
-            parameters.case = 2;
+            parameters.case = 1;
             sae = sae.train(data,parameters);
             
-            save('sae_mnist_finetune.mat','sae');
+            save('sae_mnist_finetune2.mat','sae');
             
             data = reshape(data,D,[]);
-            recon_data_sample2 = sae.rebuild(data,'sample');
-            error_sample2 = sum(sum((recon_data_sample2 - data).^2)) / N;
-            recon_data_nosample2 = sae.rebuild(data,'nosample');
-            error_nosample2 = sum(sum((recon_data_nosample2 - data).^2)) / N;
+            recon_data2 = sae.rebuild(data,'sample');
+            error2 = sum(sum((recon_data2 - data).^2)) / N
+            e = error2;
         end
     end
 end
