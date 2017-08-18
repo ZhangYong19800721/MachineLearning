@@ -161,6 +161,7 @@ classdef DBN
             save('dbn_train.mat','dbn');
             y = dbn.classify(test_images);
             error2 = sum(y~=test_labels') / length(y);
+            e = error2;
         end
     end
 end
