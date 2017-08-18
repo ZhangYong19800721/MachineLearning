@@ -28,6 +28,8 @@ classdef SAE < learn.StackedRBM
                 code = learn.sample(data{length(data)});
             elseif strcmp(option,'nosample')
                 code = data{length(data)};
+            elseif strcmp(option,'fix')
+                code = data{length(data)} > 0.5;
             else
                 error('optionµÄÖµ´íÎó');
             end

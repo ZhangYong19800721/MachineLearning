@@ -102,8 +102,7 @@ classdef PerceptionS
             
             cgbps = learn.CGBPS(mnist,mnist,ps);
 
-            
-            weight = optimal.ConjugateGradient(cgbps,ps.weight,1e-6,1e-3,1e6,inf,10);
+            weight = optimal.minimize_cg(cgbps,ps.weight,1e-6,1e-3,1e6,inf,10);
             ps.weight = weight;
             
             recon_mnist = ps.do(mnist);
