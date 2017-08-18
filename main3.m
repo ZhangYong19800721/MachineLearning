@@ -1,5 +1,6 @@
 clear all;
 close all;
+rng(1);
 
 [train_images,~,test_images,test_labels] = learn.import_mnist('./+learn/mnist.mat');
 K = 10; [D,S,M] = size(train_images);
