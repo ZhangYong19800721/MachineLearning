@@ -8,20 +8,18 @@ nucleotide = nucleotide(:,1:N);
 nucleotide(nucleotide>0) = 1;
 nucleotide = reshape(nucleotide,D,S,M);
 
-rbm = learn.RBM(D,1024);
-rbm = rbm.initialize(nucleotide);
+configure = [D,1024,256];
+sae = learn.SAE(configure);
 
-parameters.learn_rate = [1e-8,1e-2];
+parameters.learn_rate = [1e-6,1e-2];
 parameters.weight_cost = 1e-4;
-parameters.max_it = 1e6;
-
-rbm = rbm.pretrain(nucleotide,parameters);
+parameters.max_it = 1e0;
+sae = sae.pretrain(nucleotide,parameters);
+            
 nucleotide = reshape(nucleotide,D,[]);
-recon_nucleotide = rbm.reconstruct(nucleotide);
-
-recon_nucleotide = round(recon_nucleotide); 
-recon_nucleotide(recon_nucleotide<0) = 0;
+recon_nucleotide = sae.rebuild(nucleotide,'sample');
+recon_nucleotide = recon_nucleotide > 0.5;
 
 error = sum(sum((nucleotide - recon_nucleotide).^2)) / N;
 
-save;
+save('sae_DAN.mat','sae');
