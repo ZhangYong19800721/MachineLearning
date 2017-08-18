@@ -85,6 +85,7 @@ classdef PerceptionS
             ps = learn.PerceptionS(configure);
             
             load('sae_mnist_finetune.mat');
+            %load('sae_mnist_pretrain.mat');
             
             ps.weight = [reshape(sae.rbms{1}.weight_v2h,[],1);
                 reshape(sae.rbms{1}.hidden_bias,[],1);
@@ -94,9 +95,10 @@ classdef PerceptionS
                 reshape(sae.rbms{2}.visual_bias,[],1);
                 reshape(sae.rbms{1}.weight_h2v',[],1);
                 reshape(sae.rbms{1}.visual_bias,[],1)];
+           
             
             recon_mnist = ps.do(mnist);
-            e1 = 255^2 * sum(sum((recon_mnist - mnist).^2)) / N
+            e1 = sum(sum((recon_mnist - mnist).^2)) / N
             
             cgbps = learn.CGBPS(mnist,mnist,ps);
 
@@ -105,7 +107,7 @@ classdef PerceptionS
             ps.weight = weight;
             
             recon_mnist = ps.do(mnist);
-            e2 = 255^2 * sum(sum((recon_mnist - mnist).^2)) / N
+            e2 = sum(sum((recon_mnist - mnist).^2)) / N
         end
     end
 end
