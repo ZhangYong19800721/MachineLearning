@@ -10,7 +10,7 @@ classdef Weak_Line < learn.Weak
     methods
         function c = predict(obj, points)
             c = obj.w * points + repmat(obj.b,1,size(points,2));
-            c(c > 0) = +1; c(c <= 0) = -1;
+            c = c > 0;
         end
     end
     

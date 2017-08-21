@@ -11,7 +11,7 @@ classdef Weak
     end
     
     methods (Abstract)
-        c = predict(obj, points) % 返回值必须为+1或-1，表示将数据点分类为正例或反例
+        c = predict(obj, points) % 返回值必须为1或0，表示将数据点分类为正例或反例
     end
 end
 
