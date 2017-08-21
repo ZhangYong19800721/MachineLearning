@@ -1,6 +1,6 @@
 classdef Weak_Line < learn.Weak
     %WEAK_LINE 线性弱分类器
-    % 线性弱分类器，继承自learn.Weak。配合AdaBoost使用
+    % 线性弱分类器，继承自learn.Weak。配合Boost算法使用
     
     properties
         w; % 权值
