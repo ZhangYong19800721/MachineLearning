@@ -1,6 +1,7 @@
 classdef DiscreteAdaBoost1
     %DiscreteAdaBoost 实现Discrete AdaBoost算法
     %  参考论文"Improved Boosting Algorithms Using Confidence-rated Predictions"
+    %  DiscreteAdaBoost2与DiscreteAdaBoost1是等价的
     
     properties
         weak; % 包含若干个弱分类器的cell数组
@@ -25,7 +26,7 @@ classdef DiscreteAdaBoost1
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            c = wc.predict(points); k(c) = 1; k(~c) = -1;
+            c = wc.predict(points); k = -ones(size(c)); k(c) = 1;
             r = weight * (labels .* k)';
             beda = 0.5 * log((1 + r)/(1 - r));
             obj.weak{1+length(obj.weak)} = wc;
@@ -38,10 +39,65 @@ classdef DiscreteAdaBoost1
             %PREDICT 判断两个点是否相似，相似为+1，不相似为-1
             %
             H = length(obj.alfa); [~,N] = size(points); % H弱分类器的个数，N数据点数
-            c = logical(H,N); % 存储弱分类器的分类结果
+            c = false(H,N); % 存储弱分类器的分类结果
             for h=1:H,c(h,:) = obj.weak{h}.predict(points);end
-            k(c) = 1; k(~c) = -1;
+            k = -ones(size(c)); k(c) = 1;
             y = obj.alfa * k > 0;
+        end
+    end
+    
+    methods(Static)
+        function boost = unit_test()
+            clear all;
+            close all;
+            rng(1)
+            
+            boost = learn.DiscreteAdaBoost1();
+            
+            N = 1e4;
+            [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
+            
+            figure;
+            group1 = points(:,labels== 1);
+            group2 = points(:,labels==-1);
+            plot(group1(1,:),group1(2,:),'+'); hold on;
+            plot(group2(1,:),group2(2,:),'*'); 
+            
+            weight = ones(1,N)/N; % 初始化权值
+            [X,Y] = meshgrid(-15:15,-15:15); A = (-pi/2+eps):0.1:(pi/2-eps); 
+            X = reshape(X,1,[]); Y = reshape(Y,1,[]);
+            T = 10;
+            
+            for t = 1:T
+                r_max = -inf; best_w = []; best_b = [];
+                wc = learn.Weak_Line();
+                for i = 1:length(X)
+                    for j = 1:length(A)
+                        wc.w = [tan(A(j)) 1]; wc.b = -(tan(A(j))*X(i)+Y(i));
+                        c = wc.predict(points); k = -ones(size(c)); k(c) = 1;
+                        r = weight * (labels.*k)';
+                        if r > r_max
+                            best_w = wc.w;
+                            best_b = wc.b;
+                            r_max = r;
+                        end
+                    end
+                end
+                
+                wc.w = best_w; wc.b = best_b;
+                [boost,weight] = boost.ensemble(points,labels,weight,wc);
+            end
+            
+            for t = 1:T
+                a = boost.weak{t}.w(1);
+                b = boost.weak{t}.w(2);
+                c = boost.weak{t}.b;
+                myfunc = @(x,y) a*x + b*y + c;
+                ezplot(myfunc,[-15,15,-8,8]);
+            end
+            
+            c = boost.predict(points);
+            error = sum(xor(c,l)) / N;
         end
     end
 end
