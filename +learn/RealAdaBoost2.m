@@ -1,4 +1,4 @@
-classdef RealAdaBoost
+classdef RealAdaBoost2
     %RealAdaBoost 实现Real AdaBoost算法
     %  参考论文"Additve Logistic Regression a Statistical View of Boosting"
     %  这篇论文非常重要，揭示了boost算法和加性统计模型在本质上是相同的，分析
@@ -9,11 +9,20 @@ classdef RealAdaBoost
     end
     
     methods
-        function obj = RealAdaBoost()
+        function obj = RealAdaBoost2()
         end
     end
     
-    methods
+    methods(Access = public)
+        function y = predict(obj,points)  
+            % PREDICT 使用经过训练的模型判断数据点的分类，正例为1，反例为0
+            %
+            H = length(obj.weak); [~,N] = size(points); % H弱分类器的个数，N数据点数
+            c = zeros(H,N); % 存储弱分类器的分类结果
+            for h=1:H,c(h,:) = obj.weak{h}.predict(points);end
+            y = sum(c) > 0;
+        end
+        
         function [obj,w]  = ensemble(obj,points,labels,weight,wc)
             %ensemble 组合弱分类器，找到一个最优的弱分类器，然后通过此函数组合起来
             %   输入：
@@ -26,23 +35,10 @@ classdef RealAdaBoost
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            c = wc.predict(points); % c是一个logical变量
-            c(c>=1) = 1 - eps; c(c<=0) = eps;
-            f = 0.5 * log(c./(1-c));
+            c = wc.predict(points); % c是一个在整个实数域上的变量
             obj.weak{1+length(obj.weak)} = wc;
-            w = weight .* exp(-labels .* f);
+            w = weight .* exp(-labels .* c);
             w = w ./ sum(w);
-        end
-        
-        function y = predict(obj,points)  % 使用经过训练的模型判断数据点的分类
-            %PREDICT 判断两个点是否相似，相似为+1，不相似为-1
-            %
-            H = length(obj.weak); [~,N] = size(points); % H弱分类器的个数，N数据点数
-            c = zeros(H,N); % 存储弱分类器的分类结果
-            for h=1:H,c(h,:) = obj.weak{h}.predict(points);end
-            c(c>=1) = 1 - eps; c(c<=0) = eps;
-            f = 0.5*log(c./(1-c));
-            y = sum(f) > 0;
         end
     end
     
@@ -52,7 +48,7 @@ classdef RealAdaBoost
             close all;
             rng(1)
             
-            boost = learn.RealAdaBoost();
+            boost = learn.RealAdaBoost2();
             
             N = 1e4;
             [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
@@ -69,21 +65,18 @@ classdef RealAdaBoost
             T = 10;
             
             for t = 1:T
-                r_min = inf; best_w = []; best_b = [];
-                wc = learn.Weak_LineP();
+                z_min = inf; best_w = []; best_b = [];
+                wc = learn.Weak_LineS();
                 for i = 1:length(X)
                     for j = 1:length(A)
-                        wc.w = [tan(A(j)) 1]; wc.b = -(tan(A(j))*X(i)+Y(i));
+                        v = [tan(A(j)) 1 -(tan(A(j))*X(i)+Y(i))];
+                        wc.w = [v(1) v(2)]; wc.b = v(3);
                         c = wc.predict(points); 
-                        c(c>=1) = 1 - eps; c(c<=0) = eps;
-                        f = 0.5 * log(c./(1-c)); f = f > 0;
-                        
-                        % 计算猜对的数学期望
-                        r = weight * xor(f,l)';
-                        if r < r_min
+                        z = weight * exp(-labels .* c)';
+                        if z < z_min
                             best_w = wc.w;
                             best_b = wc.b;
-                            r_min = r;
+                            z_min = z;
                         end
                     end
                 end

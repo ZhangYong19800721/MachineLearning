@@ -35,8 +35,8 @@ classdef DiscreteAdaBoost1
             w = w ./ sum(w);
         end
         
-        function y = predict(obj,points)  % 使用经过训练的模型判断数据点的分类
-            %PREDICT 判断两个点是否相似，相似为+1，不相似为-1
+        function y = predict(obj,points)
+            %PREDICT 使用经过训练的模型判断数据点的分类，正例为1，反例为0
             %
             H = length(obj.alfa); [~,N] = size(points); % H弱分类器的个数，N数据点数
             c = false(H,N); % 存储弱分类器的分类结果
