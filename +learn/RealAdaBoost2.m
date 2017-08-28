@@ -18,7 +18,7 @@ classdef RealAdaBoost2
             % PREDICT 使用经过训练的模型判断数据点的分类，正例为1，反例为0
             %
             H = length(obj.weak); [~,N] = size(points); % H弱分类器的个数，N数据点数
-            c = zeros(H,N); % 存储弱分类器的分类结果
+            c = zeros(H,N);                             % 存储弱分类器的分类结果
             for h=1:H,c(h,:) = obj.weak{h}.predict(points);end
             y = sum(c) > 0;
         end
@@ -35,9 +35,9 @@ classdef RealAdaBoost2
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            c = wc.predict(points); % c是一个在整个实数域上的变量
+            f = wc.predict(points); % f是一个在整个实数域上的变量
             obj.weak{1+length(obj.weak)} = wc;
-            w = weight .* exp(-labels .* c);
+            w = weight .* exp(-labels .* f);
             w = w ./ sum(w);
         end
     end
@@ -71,8 +71,8 @@ classdef RealAdaBoost2
                     for j = 1:length(A)
                         v = [tan(A(j)) 1 -(tan(A(j))*X(i)+Y(i))];
                         wc.w = [v(1) v(2)]; wc.b = v(3);
-                        c = wc.predict(points); 
-                        z = weight * exp(-labels .* c)';
+                        f = wc.predict(points); 
+                        z = weight * exp(-labels .* f)';
                         if z < z_min
                             best_w = wc.w;
                             best_b = wc.b;
