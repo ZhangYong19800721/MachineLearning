@@ -28,13 +28,14 @@ classdef DiscreteAdaBoost2
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            c = wc.predict(points); % c是一个logical变量
-            l = labels > 0; % labels也换成logical变量
-            r = weight * xor(c,l)';
-            beda = log((1 - r)/r);
+            f = wc.predict(points);            % f是一个logical变量
+            fx = -ones(size(f)); fx(f) = 1;    % fx取+1或-1
+            l = labels > 0;                    % l是一个logical变量
+            err = weight * xor(f,l)';
+            c = 0.5 * log((1 - err)/err);
             obj.weak{1+length(obj.weak)} = wc;
-            obj.alfa = [obj.alfa beda];
-            w = weight .* exp(beda .* xor(c,l));
+            obj.alfa = [obj.alfa c];
+            w = weight .* exp(-c .* labels .* fx);
             w = w ./ sum(w);
         end
         
@@ -69,20 +70,21 @@ classdef DiscreteAdaBoost2
             weight = ones(1,N)/N; % 初始化权值
             [X,Y] = meshgrid(-15:15,-15:15); A = (-pi/2+eps):0.1:(pi/2-eps); 
             X = reshape(X,1,[]); Y = reshape(Y,1,[]);
-            T = 10;
+            T = 20;
             
             for t = 1:T
-                r_min = inf; best_w = []; best_b = [];
+                r_max = -inf; best_w = []; best_b = [];
                 wc = learn.Weak_Line();
                 for i = 1:length(X)
                     for j = 1:length(A)
                         wc.w = [tan(A(j)) 1]; wc.b = -(tan(A(j))*X(i)+Y(i));
-                        c = wc.predict(points);
-                        r = weight * xor(c,l)';
-                        if r < r_min
+                        f = wc.predict(points);
+                        fx = -ones(size(f)); fx(f) = 1;
+                        r = weight * (labels .* fx)';
+                        if r > r_max
                             best_w = wc.w;
                             best_b = wc.b;
-                            r_min = r;
+                            r_max = r;
                         end
                     end
                 end
