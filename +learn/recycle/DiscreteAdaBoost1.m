@@ -1,8 +1,7 @@
-classdef DiscreteAdaBoost
+classdef DiscreteAdaBoost1
     %DiscreteAdaBoost 实现Discrete AdaBoost算法
-    %  参考论文"Additve Logistic Regression a Statistical View of Boosting"
-    %  这篇论文非常重要，揭示了boost算法和加性统计模型在本质上是相同的，分析
-    %  了RealAdaBoost和GentleBoost算法
+    %  参考论文"Improved Boosting Algorithms Using Confidence-rated Predictions"
+    %  DiscreteAdaBoost2与DiscreteAdaBoost1是等价的
     
     properties
         weak; % 包含若干个弱分类器的cell数组
@@ -10,7 +9,7 @@ classdef DiscreteAdaBoost
     end
     
     methods
-        function obj = DiscreteAdaBoost()
+        function obj = DiscreteAdaBoost1()
         end
     end
     
@@ -27,14 +26,12 @@ classdef DiscreteAdaBoost
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            f = wc.predict(points);            % f是一个logical变量
-            fx = -ones(size(f)); fx(f) = 1;    % fx取+1或-1
-            l = labels > 0;                    % l是一个logical变量
-            err = weight * xor(f,l)';
-            c = 0.5 * log((1 - err)/err);
+            c = wc.predict(points); k = -ones(size(c)); k(c) = 1;
+            r = weight * (labels .* k)';
+            beda = 0.5 * log((1 + r)/(1 - r));
             obj.weak{1+length(obj.weak)} = wc;
-            obj.alfa = [obj.alfa c];
-            w = weight .* exp(-c .* labels .* fx);
+            obj.alfa = [obj.alfa beda];
+            w = weight .* exp(-beda * labels .* k);
             w = w ./ sum(w);
         end
         
@@ -55,7 +52,7 @@ classdef DiscreteAdaBoost
             close all;
             rng(1)
             
-            boost = learn.DiscreteAdaBoost();
+            boost = learn.DiscreteAdaBoost1();
             
             N = 1e4;
             [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
@@ -77,9 +74,8 @@ classdef DiscreteAdaBoost
                 for i = 1:length(X)
                     for j = 1:length(A)
                         wc.w = [tan(A(j)) 1]; wc.b = -(tan(A(j))*X(i)+Y(i));
-                        f = wc.predict(points);
-                        fx = -ones(size(f)); fx(f) = 1;
-                        r = weight * (labels .* fx)';
+                        c = wc.predict(points); k = -ones(size(c)); k(c) = 1;
+                        r = weight * (labels.*k)';
                         if r > r_max
                             best_w = wc.w;
                             best_b = wc.b;
@@ -101,7 +97,7 @@ classdef DiscreteAdaBoost
             end
             
             c = boost.predict(points);
-            error = sum(xor(c,l)) / N
+            error = sum(xor(c,l)) / N;
         end
     end
 end
