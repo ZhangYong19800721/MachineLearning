@@ -18,9 +18,9 @@ classdef RealAdaBoost2
             % PREDICT 使用经过训练的模型判断数据点的分类，正例为1，反例为0
             %
             H = length(obj.weak); [~,N] = size(points); % H弱分类器的个数，N数据点数
-            c = zeros(H,N);                             % 存储弱分类器的分类结果
-            for h=1:H,c(h,:) = obj.weak{h}.predict(points);end
-            y = sum(c) > 0;
+            f = zeros(H,N);                             % 存储弱分类器的计算结果
+            for h=1:H,f(h,:) = obj.weak{h}.predict(points);end
+            y = sum(f) > 0;
         end
         
         function [obj,w]  = ensemble(obj,points,labels,weight,wc)
@@ -35,10 +35,10 @@ classdef RealAdaBoost2
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            f = wc.predict(points); % f是一个在整个实数域上的变量
+            f = wc.predict(points); % 计算加权激活概率
             obj.weak{1+length(obj.weak)} = wc;
             w = weight .* exp(-labels .* f);
-            w = w ./ sum(w);
+            w = w ./ sum(w); 
         end
     end
     
@@ -50,7 +50,7 @@ classdef RealAdaBoost2
             
             boost = learn.RealAdaBoost2();
             
-            N = 1e4;
+            N = 1e4; epsilon = 1/N;
             [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
             
             figure;
@@ -60,41 +60,56 @@ classdef RealAdaBoost2
             plot(group2(1,:),group2(2,:),'*'); 
             
             weight = ones(1,N)/N; % 初始化权值
+           
             [X,Y] = meshgrid(-15:15,-15:15); A = (-pi/2+eps):0.1:(pi/2-eps); 
             X = reshape(X,1,[]); Y = reshape(Y,1,[]);
             T = 10;
             
             for t = 1:T
                 z_min = inf; best_w = []; best_b = [];
-                wc = learn.Weak_LineS();
+                wc = learn.Weak_LineR();
+                
                 for i = 1:length(X)
                     for j = 1:length(A)
                         v = [tan(A(j)) 1 -(tan(A(j))*X(i)+Y(i))];
                         wc.w = [v(1) v(2)]; wc.b = v(3);
-                        f = wc.predict(points); 
-                        z = weight * exp(-labels .* f)';
+                        p = wc.predict(points);
+                        W_POS_1 = sum(weight( l &  p));
+                        W_NEG_1 = sum(weight(~l &  p));
+                        W_POS_2 = sum(weight( l & ~p));
+                        W_NEG_2 = sum(weight(~l & ~p));
+                        z = 2 * sum(sqrt(W_POS_1 * W_NEG_1) + sqrt(W_POS_2 * W_NEG_2));
+                        
                         if z < z_min
                             best_w = wc.w;
                             best_b = wc.b;
+                            best_x = 0.5 * log((W_POS_1 + epsilon) / (W_NEG_1 + epsilon));
+                            best_y = 0.5 * log((W_POS_2 + epsilon) / (W_NEG_2 + epsilon));
                             z_min = z;
                         end
                     end
                 end
                 
-                wc.w = best_w; wc.b = best_b;
+                wc.w = best_w; wc.b = best_b; wc.x = best_x; wc.y = best_y;
                 [boost,weight] = boost.ensemble(points,labels,weight,wc);
-            end
-            
-            for t = 1:T
+                
                 a = boost.weak{t}.w(1);
                 b = boost.weak{t}.w(2);
-                c = boost.weak{t}.b;
-                myfunc = @(x,y) a*x + b*y + c;
+                q = boost.weak{t}.b;
+                myfunc = @(x,y) a*x + b*y + q;
                 ezplot(myfunc,[-15,15,-8,8]);
             end
             
+%             for t = 1:T
+%                 a = boost.weak{t}.w(1);
+%                 b = boost.weak{t}.w(2);
+%                 q = boost.weak{t}.b;
+%                 myfunc = @(x,y) a*x + b*y + q;
+%                 ezplot(myfunc,[-15,15,-8,8]);
+%             end
+            
             c = boost.predict(points);
-            error = sum(xor(c,l)) / N;
+            error = sum(xor(c,l)) / N
         end
     end
 end
