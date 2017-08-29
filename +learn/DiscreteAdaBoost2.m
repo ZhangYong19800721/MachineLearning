@@ -70,7 +70,7 @@ classdef DiscreteAdaBoost2
             weight = ones(1,N)/N; % 初始化权值
             [X,Y] = meshgrid(-15:15,-15:15); A = (-pi/2+eps):0.1:(pi/2-eps); 
             X = reshape(X,1,[]); Y = reshape(Y,1,[]);
-            T = 20;
+            T = 10;
             
             for t = 1:T
                 r_max = -inf; best_w = []; best_b = [];
@@ -102,7 +102,7 @@ classdef DiscreteAdaBoost2
             end
             
             c = boost.predict(points);
-            error = sum(xor(c,l)) / N;
+            error = sum(xor(c,l)) / N
         end
     end
 end
