@@ -26,12 +26,49 @@ classdef GentleBoost
             w = weight .* (-labels .* f); % 更新权值
             w = w ./ sum(w); % 归一化权值
         end
+        
+        function wc = find_wc(obj,points,labels,weight)
+            % 选择最优的弱分类器
+            wc = learn.Weak_LineR(); l = labels > 0;
+            
+            X = -15:15; Y = -15:15; A = linspace(-pi/2,pi/2,180); 
+            zm = inf;
+            for x = X 
+                for y = Y
+                    for a = A
+                        v = [-tan(a) 1 tan(a)*x-y];
+                        wc.w = [v(1) v(2)]; wc.b = v(3);
+                        p = wc.predict(points);
+                        W_POS_1 = sum(weight( l &  p));
+                        W_NEG_1 = sum(weight(~l &  p));
+                        W_POS_2 = sum(weight( l & ~p));
+                        W_NEG_2 = sum(weight(~l & ~p));
+                        k = p;
+                        k(p> 0.5) = W_POS_1 - W_NEG_1; 
+                        k(p<=0.5) = W_POS_2 - W_NEG_2;
+                        z = mean(exp(-labels .* (obj.compute(points) + k)));
+                        if z < zm
+                            best.w = wc.w;
+                            best.b = wc.b;
+                            best.x = W_POS_1 - W_NEG_1;
+                            best.y = W_POS_2 - W_NEG_2;
+                            zm = z;
+                        end
+                    end
+                end
+            end
+            
+            wc.w = best.w;
+            wc.b = best.b;
+            wc.x = best.x;
+            wc.y = best.y;
+        end
     end
     
     methods(Access = public)
         function y = compute(obj,points)
             M = length(obj.weak); [~,N] = size(points); % M弱分类器的个数，N数据点数
-            f = logical(M,N); % 存储弱分类器的分类结果
+            f = zeros(M,N); % 存储弱分类器的分类结果
             for m=1:M, f(m,:) = obj.weak{m}.predict(points); end
             y = sum(f);
         end
@@ -53,8 +90,41 @@ classdef GentleBoost
             
             [~,N] = size(points); % 得到数据点数目
             weight = ones(1,N) / N; % 初始化权值
+            for m = 1:M
+                wc = obj.find_wc(points,labels,weight);
+                [obj,weight] = obj.ensemble(points,labels,weight,wc);
+                
+                a = obj.weak{m}.w(1);
+                b = obj.weak{m}.w(2);
+                c = obj.weak{m}.b;
+                myfunc = @(x,y) a*x + b*y + c;
+                ezplot(myfunc,[-15,15,-8,8]);
+            end
+        end
+    end
+    
+    methods(Static)
+        function boost = unit_test()
+            clear all;
+            close all;
+            rng(1)
             
+            boost = learn.GentleBoost();
             
+            N = 1e4;
+            [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
+            
+            figure;
+            group1 = points(:,labels== 1);
+            group2 = points(:,labels==-1);
+            plot(group1(1,:),group1(2,:),'+'); hold on;
+            plot(group2(1,:),group2(2,:),'*'); 
+            
+            M = 10;
+            boost = boost.train(points,labels,M);
+            
+            y = boost.predict(points);
+            error = sum(y~=l) / N
         end
     end
 end

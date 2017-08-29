@@ -99,8 +99,8 @@ classdef RealBoost
                 
                 a = obj.weak{m}.w(1);
                 b = obj.weak{m}.w(2);
-                q = obj.weak{m}.b;
-                myfunc = @(x,y) a*x + b*y + q;
+                c = obj.weak{m}.b;
+                myfunc = @(x,y) a*x + b*y + c;
                 ezplot(myfunc,[-15,15,-8,8]);
             end
         end
