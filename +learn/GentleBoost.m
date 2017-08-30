@@ -21,9 +21,9 @@ classdef GentleBoost
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            f = wc.predict(points); % 首先计算弱分类器的输出
+            f = wc.compute(points); % 首先计算弱分类器的输出
             obj.weak{1+length(obj.weak)} = wc; % 将弱分类器加入到boost组中
-            w = weight .* (-labels .* f); % 更新权值
+            w = weight .* exp(-labels .* f); % 更新权值
             w = w ./ sum(w); % 归一化权值
         end
         
@@ -38,15 +38,15 @@ classdef GentleBoost
                     for a = A
                         v = [-tan(a) 1 tan(a)*x-y];
                         wc.w = [v(1) v(2)]; wc.b = v(3);
-                        p = wc.predict(points);
-                        W_POS_1 = sum(weight( l &  p));
-                        W_NEG_1 = sum(weight(~l &  p));
-                        W_POS_2 = sum(weight( l & ~p));
-                        W_NEG_2 = sum(weight(~l & ~p));
-                        k = p;
-                        k(p> 0.5) = W_POS_1 - W_NEG_1; 
-                        k(p<=0.5) = W_POS_2 - W_NEG_2;
-                        z = mean(exp(-labels .* (obj.compute(points) + k)));
+                        b = wc.predict(points);
+                        W_POS_1 = sum(weight( l &  b));
+                        W_NEG_1 = sum(weight(~l &  b));
+                        W_POS_2 = sum(weight( l & ~b));
+                        W_NEG_2 = sum(weight(~l & ~b));
+                        k = ones(size(b));
+                        k( b) = W_POS_1 - W_NEG_1; 
+                        k(~b) = W_POS_2 - W_NEG_2;
+                        z = weight * exp(-labels .* k)';
                         if z < zm
                             best.w = wc.w;
                             best.b = wc.b;
@@ -69,8 +69,8 @@ classdef GentleBoost
         function y = compute(obj,points)
             M = length(obj.weak); [~,N] = size(points); % M弱分类器的个数，N数据点数
             f = zeros(M,N); % 存储弱分类器的分类结果
-            for m=1:M, f(m,:) = obj.weak{m}.predict(points); end
-            y = sum(f);
+            for m=1:M, f(m,:) = obj.weak{m}.compute(points); end
+            y = sum(f,1);
         end
         
         function y = predict(obj,points)  % 使用经过训练的模型判断数据点的分类
@@ -94,11 +94,16 @@ classdef GentleBoost
                 wc = obj.find_wc(points,labels,weight);
                 [obj,weight] = obj.ensemble(points,labels,weight,wc);
                 
+                l = labels > 0;
+                y = obj.predict(points);
+                error(m) = sum(xor(y,l)) / N
+                
                 a = obj.weak{m}.w(1);
                 b = obj.weak{m}.w(2);
                 c = obj.weak{m}.b;
                 myfunc = @(x,y) a*x + b*y + c;
                 ezplot(myfunc,[-15,15,-8,8]);
+                drawnow;
             end
         end
     end
@@ -120,7 +125,7 @@ classdef GentleBoost
             plot(group1(1,:),group1(2,:),'+'); hold on;
             plot(group2(1,:),group2(2,:),'*'); 
             
-            M = 10;
+            M = 20;
             boost = boost.train(points,labels,M);
             
             y = boost.predict(points);

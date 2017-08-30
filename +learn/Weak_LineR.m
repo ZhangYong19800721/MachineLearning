@@ -1,6 +1,6 @@
-classdef Weak_LineR < learn.Weak
+classdef Weak_LineR
     %Weak_LineR 线性实数弱分类器
-    % 线性实数弱分类器，继承自learn.Weak。
+    % 线性实数弱分类器
     % 配合RealAdaBoost算法使用
     % 
     
@@ -13,14 +13,18 @@ classdef Weak_LineR < learn.Weak
     
     methods
         function obj = Weak_LineR()
-            obj.x = true;
-            obj.y = false;
         end
         
-        function c = predict(obj, points)
-            z = obj.w * points + repmat(obj.b,1,size(points,2));
-            positive = z > 0;
-            c = obj.y * ones(size(z)); c(positive) = obj.x; 
+        function f = compute(obj, points)
+            b = obj.predict(points);
+            f = zeros(size(b));
+            f(b) = obj.x; f(~b) = obj.y;
+        end
+        
+        function b = predict(obj, points)
+            [~,N] = size(points);
+            z = obj.w * points + repmat(obj.b,1,N);
+            b = z > 0;
         end
     end
     

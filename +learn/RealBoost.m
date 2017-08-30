@@ -26,7 +26,7 @@ classdef RealBoost
             %   obj 训练后的adaboost对象
             %   w 更新后的权值
             
-            f = wc.predict(points); % 计算弱分类器函数值f(x)
+            f = wc.compute(points); % 计算弱分类器函数值f(x)
             obj.weak{1+length(obj.weak)} = wc; % 将弱分类器加入组中
             w = weight .* exp(-labels .* f); % 更新权值
             w = w ./ sum(w); % 归一化权值
@@ -73,8 +73,8 @@ classdef RealBoost
             % compute 计算boost模型的响应函数F(x)
             M = length(obj.weak); [~,N] = size(points); % M弱分类器的个数，N数据点数
             f = zeros(M,N);                             % 存储弱分类器的计算结果
-            for m=1:M,f(m,:) = obj.weak{m}.predict(points);end
-            y = sum(f);
+            for m=1:M,f(m,:) = obj.weak{m}.compute(points);end
+            y = sum(f,1);
         end
         
         function y = predict(obj,points)  
@@ -97,11 +97,16 @@ classdef RealBoost
                 wc = obj.find_wc(points,labels,weight);
                 [obj,weight] = obj.ensemble(points,labels,weight,wc);
                 
+                l = labels > 0;
+                y = obj.predict(points);
+                error(m) = sum(xor(y,l)) / N
+                
                 a = obj.weak{m}.w(1);
                 b = obj.weak{m}.w(2);
                 c = obj.weak{m}.b;
                 myfunc = @(x,y) a*x + b*y + c;
                 ezplot(myfunc,[-15,15,-8,8]);
+                drawnow
             end
         end
     end
@@ -114,7 +119,7 @@ classdef RealBoost
             
             boost = learn.RealBoost();
             
-            N = 1e4;
+            N = 1e3;
             [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
             
             figure;
@@ -123,7 +128,7 @@ classdef RealBoost
             plot(group1(1,:),group1(2,:),'+'); hold on;
             plot(group2(1,:),group2(2,:),'*'); 
             
-            M = 5;
+            M = 15;
             boost = boost.train(points,labels,M);
             
             y = boost.predict(points);
