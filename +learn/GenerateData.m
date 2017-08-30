@@ -41,7 +41,7 @@ classdef GenerateData
         
         function [points,labels] = type2(N)
             % 
-            points = 20 * rand(2,N) - repmat([10 10]',1,N);
+            points = 20 * rand(2,N) - repmat([10 10]',1,N); % 产生x->[-10,10],y->[-10,10]上均匀分布的随机数
             labels = ones(1,N);
             for i = 1:N
                 if abs(points(1,i) - points(2,i)) > 2
@@ -90,7 +90,7 @@ classdef GenerateData
         end
         
         function [points,labels] = type4(N)
-            % 
+            % 一饼形
             points = 20 * rand(2,N) - repmat([10 10]',1,N);
             labels = -ones(1,N);
             for i = 1:N
