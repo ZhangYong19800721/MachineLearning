@@ -29,9 +29,9 @@ classdef GentleBoost
         
         function wc = find_wc(obj,points,labels,weight)
             % 选择最优的弱分类器
-            wc = learn.Weak_LineR(); l = labels > 0;
+            wc = learn.Weak_LineR(); l = labels > 0; epsilon = 1e-100;
             
-            X = -15:15; Y = -15:15; A = linspace(-pi/2,pi/2,180); 
+            X = -10:10; Y = -10:10; A = linspace(-pi/2,pi/2,180); 
             zm = inf;
             for x = X 
                 for y = Y
@@ -39,10 +39,10 @@ classdef GentleBoost
                         v = [-tan(a) 1 tan(a)*x-y];
                         wc.w = [v(1) v(2)]; wc.b = v(3);
                         b = wc.predict(points);
-                        W_POS_1 = sum(weight( l &  b));
-                        W_NEG_1 = sum(weight(~l &  b));
-                        W_POS_2 = sum(weight( l & ~b));
-                        W_NEG_2 = sum(weight(~l & ~b));
+                        W_POS_1 = sum(weight( l &  b)) / (epsilon+sum(weight( b)));
+                        W_NEG_1 = sum(weight(~l &  b)) / (epsilon+sum(weight( b)));
+                        W_POS_2 = sum(weight( l & ~b)) / (epsilon+sum(weight(~b)));
+                        W_NEG_2 = sum(weight(~l & ~b)) / (epsilon+sum(weight(~b)));
                         k = ones(size(b));
                         k( b) = W_POS_1 - W_NEG_1; 
                         k(~b) = W_POS_2 - W_NEG_2;
@@ -79,7 +79,7 @@ classdef GentleBoost
             y = obj.compute(points) > 0;
         end
         
-        function obj = train(obj,points,labels,M)
+        function [obj,err] = train(obj,points,labels,M)
             % train 训练GentleBoost模型
             % 输入：
             % points 数据点
@@ -96,40 +96,37 @@ classdef GentleBoost
                 
                 l = labels > 0;
                 y = obj.predict(points);
-                error(m) = sum(xor(y,l)) / N
+                err(m) = sum(xor(y,l)) / N
                 
                 a = obj.weak{m}.w(1);
                 b = obj.weak{m}.w(2);
                 c = obj.weak{m}.b;
                 myfunc = @(x,y) a*x + b*y + c;
-                ezplot(myfunc,[-15,15,-8,8]);
+                ezplot(myfunc,[-10,10,-10,10]);
                 drawnow;
             end
         end
     end
     
     methods(Static)
-        function boost = unit_test()
+        function [boost,err] = unit_test()
             clear all;
             close all;
-            rng(1)
+            rng(2)
             
             boost = learn.GentleBoost();
             
             N = 1e4;
-            [points,labels] = learn.GenerateData.type1(N); l = labels > 0;
+            [points,labels] = learn.GenerateData.type4(N); l = labels > 0;
             
             figure;
             group1 = points(:,labels== 1);
             group2 = points(:,labels==-1);
             plot(group1(1,:),group1(2,:),'+'); hold on;
-            plot(group2(1,:),group2(2,:),'*'); 
+            plot(group2(1,:),group2(2,:),'.'); 
             
-            M = 20;
-            boost = boost.train(points,labels,M);
-            
-            y = boost.predict(points);
-            error = sum(y~=l) / N
+            M = 200;
+            [boost,err] = boost.train(points,labels,M);
         end
     end
 end
