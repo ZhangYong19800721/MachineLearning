@@ -46,7 +46,7 @@ classdef GentleBoost
                         k = ones(size(b));
                         k( b) = W_POS_1 - W_NEG_1; 
                         k(~b) = W_POS_2 - W_NEG_2;
-                        z = weight * exp(-labels .* k)';
+                        z = weight * ((labels - k).^2)';
                         if z < zm
                             best.w = wc.w;
                             best.b = wc.b;
