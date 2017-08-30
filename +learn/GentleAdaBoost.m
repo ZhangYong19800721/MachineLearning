@@ -142,7 +142,7 @@ classdef GentleAdaBoost
                 weight = weight .* exp(-labels.*fm); % 更新权值
                 weight = weight ./ sum(weight); % 归一化权值
                 
-%                 %% 计算错误率
+                %% 计算错误率
 %                 y = obj.predict(points);
 %                 err(m) = sum(xor(y,labels>0)) / N
             end
@@ -167,7 +167,7 @@ classdef GentleAdaBoost
             plot(group1(1,:),group1(2,:),'+'); hold on;
             plot(group2(1,:),group2(2,:),'.'); 
             
-            M = 200;
+            M = 300;
             boost = boost.train(points,labels,M);
         end
     end
