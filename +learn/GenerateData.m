@@ -142,5 +142,35 @@ classdef GenerateData
                 end
             end
         end
+        
+        function [points,labels] = type6(N)
+            % 有相近y值的两个点标记为相似
+            points = 20 * rand(2,N) - repmat([10 10]',1,N); % 产生x->[-10,10],y->[-10,10]上均匀分布的随机数
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    if abs(points(2,i) - points(2,j)) < 5
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
+        
+        function [points,labels] = type7(N)
+            % 有相近2范数的两个点标记为相似（到原点的距离相近）
+            points = 20 * rand(2,N) - repmat([10 10]',1,N); % 产生x->[-10,10],y->[-10,10]上均匀分布的随机数
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    if abs(norm(points(2,i),2) - norm(points(2,j),2)) < 3
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
     end
 end

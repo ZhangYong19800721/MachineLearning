@@ -173,8 +173,9 @@ classdef BoostSSC
                 else
                     x0 = 0; y0 = 1; z0 = -wc.t;
                 end
-                f = @(x,y) x0*x+y0*y+z0
+                f = @(x,y) x0*x+y0*y+z0;
                 ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+                drawnow;
             end
         end
     end
@@ -188,10 +189,11 @@ classdef BoostSSC
             
             ssc = learn.BoostSSC();
             
-            N = 400;
-            [points,labels] = learn.GenerateData.type5(N);
+            N = 500;
+            [points,labels] = learn.GenerateData.type6(N);
+            plot(points(1,:),points(2,:),'.');hold on;
             
-            M = 64;
+            M = 10;
             ssc = ssc.train(points,labels,M);
         end
     end
