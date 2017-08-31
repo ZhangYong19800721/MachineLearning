@@ -11,7 +11,7 @@ classdef BoostSSC
          %% 选择最优弱分类器
         function [t,a,b,err] = select_stump(obj,points,labels,weight)
             %select_stump 在给定维度的情况下选择最优的stump参数
-            % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
+            % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
             % 输入：
             %   points 数据点（只包含第k维的数据，只有一行）
@@ -19,8 +19,8 @@ classdef BoostSSC
             %   weight 权值,和为1的非负向量，与labels的列数相同
             % 输出：
             %   t 门限
-            %   a 在门限值右侧的 加权激活概率 - 加权非激活概率
-            %   b 在门限值左侧的 加权激活概率 - 加权非激活概率
+            %   a a+b表示被弱分类器判为正例的所有数据点的（加权激活概率 - 加权非激活概率）
+            %   b   b表示被弱分类器判为反例的所有数据点的（加权激活概率 - 加权非激活概率）
             %   err 误差值 err = sum(w * |z - (a*[(x1(k)>t)==(x2(k)>t)] + b)|^2)
             
             %% 初始化
@@ -35,9 +35,9 @@ classdef BoostSSC
             %% 对所有可能的门限值计算a和b的值
             A = zeros(size(T)); B = zeros(size(T));
             for m = 1:length(T)
-                t = T(m); pos = points > t; i = xor(pos(I), pos(J));
-                B(m) = sum(L( i) .* weight( i)) / max(1e-100,sum(weight( i)));
-                A(m) = sum(L(~i) .* weight(~i)) / max(1e-100,sum(weight(~i))) - B(m);
+                t = T(m); pos = points > t; i = pos(I)==pos(J);
+                B(m) = sum(L(~i) .* weight(~i)) / max(1e-100,sum(weight(~i)));
+                A(m) = sum(L( i) .* weight( i)) / max(1e-100,sum(weight( i))) - B(m);
             end
             
             %% 计算误差
@@ -45,7 +45,7 @@ classdef BoostSSC
             %   error = sum(w.*(z-(a(i)*[(x1>t(i))==(x2>t(i))]+b(i))).^2);
             E = zeros(size(T)); x1 = points(I); x2 = points(J); 
             for m = 1:length(T)
-                E(m) = weight * ((L - (A(m)*((x1>T(m))==(x2>T(m)))+B(m))).^2)';
+                E(m) = sum(weight .* (L - (A(m)*((x1>T(m))==(x2>T(m)))+B(m))).^2);
             end
             
             %% 输出参数并找最优的门限
@@ -111,10 +111,12 @@ classdef BoostSSC
             M = length(obj.weak); % M弱分类器的个数
             [~,Q] = size(pairs);  % Q数据对数
             f = zeros(M,Q); % 存储弱分类器的分类结果
+            I = pairs(1,:);
+            J = pairs(2,:);
             
             %% 计算所有弱分类器的输出
             for m=1:M
-                f(m,:) = obj.weak{m}.compute(points,pairs); 
+                f(m,:) = obj.weak{m}.compute(points,pairs);
             end
             
             %% 累加弱分类器的输出并判决
@@ -148,7 +150,6 @@ classdef BoostSSC
                 % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
                 % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
                 wc = obj.select_wc(points,labels,weight);
-                wc.t = 0; wc.k = 2; wc.a = 2; wc.b = -1;
                 
                 %% 将最优弱分类器加入到强分类器中
                 obj.weak{1+length(obj.weak)} = wc;
@@ -162,8 +163,18 @@ classdef BoostSSC
                 weight = weight ./ sum(weight); % 归一化权值
                 
                 %% 计算错误率
-                y = obj.predict(points,P);
-                disp(strcat('error_rate: ',num2str(sum(xor(y,L>0)) / Q)));
+                y = obj.predict(points,P); l = L>0;
+                error = sum(y~=l) / Q;
+                disp(num2str(error));
+                
+                %% 画图
+                if wc.k == 1
+                    x0 = 1; y0 = 0; z0 = -wc.t;
+                else
+                    x0 = 0; y0 = 1; z0 = -wc.t;
+                end
+                f = @(x,y) x0*x+y0*y+z0
+                ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
             end
         end
     end
@@ -177,7 +188,7 @@ classdef BoostSSC
             
             ssc = learn.BoostSSC();
             
-            N = 40;
+            N = 400;
             [points,labels] = learn.GenerateData.type5(N);
             
             M = 64;
