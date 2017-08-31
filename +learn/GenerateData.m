@@ -109,5 +109,38 @@ classdef GenerateData
                 end
             end
         end
+        
+        function [points,labels] = type5(N)
+            % 
+            K = N/4;
+            points1 = rand(2,K); points1(1,:) = 20 * points1(1,:) - 10; points1(2,:) = 5 * points1(2,:) - 10;
+            points2 = rand(2,K); points2(1,:) = 20 * points2(1,:) - 10; points2(2,:) = 5 * points2(2,:) -  5;
+            points3 = rand(2,K); points3(1,:) = 20 * points3(1,:) - 10; points3(2,:) = 5 * points3(2,:) -  0;
+            points4 = rand(2,K); points4(1,:) = 20 * points4(1,:) - 10; points4(2,:) = 5 * points4(2,:) +  5;
+            
+            points = [points1 points2 points3 points4];
+            
+            plot(points1(1,:),points1(2,:),'+'); hold on;
+            plot(points2(1,:),points2(2,:),'.');
+            plot(points3(1,:),points3(2,:),'*');
+            plot(points4(1,:),points4(2,:),'o'); hold off;
+            
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    if points(2,i) < -5 && points(2,j) < -5
+                        labels = [labels [i,j,+1]'];
+                    elseif -5 <= points(2,i) && points(2,i) < 0 && -5 <= points(2,j) && points(2,j) < 0
+                        labels = [labels [i,j,+1]'];
+                    elseif  0 <= points(2,i) && points(2,i) < 5 &&  0 <= points(2,j) && points(2,j) < 5
+                        labels = [labels [i,j,+1]'];
+                    elseif  5 <= points(2,i) && points(2,i) <10 &&  5 <= points(2,j) && points(2,j) <10
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
     end
 end
