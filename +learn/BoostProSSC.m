@@ -8,7 +8,7 @@ classdef BoostProSSC
     end
     
     methods(Access = private)
-         %% 选择最优弱分类器 TODO 待修改
+         %% 选择最优弱分类器
         function [t,a,b,err] = select_stump(obj,points,labels,weight)
             %select_stump 在给定维度的情况下选择最优的stump参数
             % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
@@ -55,11 +55,11 @@ classdef BoostProSSC
             b = B(best.i);
         end
         
-        %% 选择最优弱分类器 TODO 待修改
+        %% 选择最优弱分类器
         function wc = select_wc(obj,points,labels,weight)
-            %select_wc 选择最优的stump弱分类器
-            % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
-            % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
+            %select_wc 选择最优的弱分类器
+            % 弱分类器fm是一个二次函数，f(x)=x'*A*x+B*x+C
+            % fm = a * [(f(x1) > t) == (f(x2) > t)] + b
             % 输入：
             %   points 数据点
             %   labels 标签,共有3行(第1/2行是数据点下标，第3行是相似标签+1或-1,每一列表示一个样本对)
@@ -70,17 +70,17 @@ classdef BoostProSSC
             %% 初始化
             [K,N] = size(points); % K数据的维度，N数据点数
             [~,Q] = size(labels); % 数据对的数目
-            t = zeros(1,K); a = zeros(1,K); b = zeros(1,K); err = zeros(1,K);
+            T = zeros(1,K); A = zeros(1,K); B = zeros(1,K); E = zeros(1,K);
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
-                [t(k),a(k),b(k),err(k)] = obj.select_stump(points(k,:),labels,weight);
+                [T(k),A(k),B(k),E(k)] = obj.select_stump(points(k,:),labels,weight);
             end
+            [~, best.k] = min(E); best.t = T(best.k); best.a = A(best.k); best.b = B(best.k);
             
-            %% 设定stump的参数
-            wc = learn.StumpSSC();
-            [~, wc.k] = min(err);
-            wc.t = t(wc.k); wc.a = a(wc.k); wc.b = b(wc.k);
+            %% 迭代寻优二次函数的参数
+            wc = learn.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
+            wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
         end
     end
     
@@ -99,8 +99,7 @@ classdef BoostProSSC
             for m = 1:M
                 f = obj.weak{m}.f; % 第m个弱分类器的变换函数
                 v = f.compute(points); % 求数据点变换后的函数值
-                t = obj.weak{m}.t; % 第m个弱分类器的门限
-                c(m,:) = v > t; % 若大于t编码为1，否则编码为0
+                c(m,:) = v > 0; % 正编码为1，非正编码为0
             end
         end
         
@@ -135,20 +134,16 @@ classdef BoostProSSC
             % obj 经过训练的BoostSCC对象
             
             %% 初始化
-            [~,N] = size(points); % 得到数据点数目
             [~,Q] = size(labels); % 得到数据对数目
-            I = labels(1,:);
-            J = labels(2,:);
-            L = labels(3,:);
-            P = [I;J];
+            I = labels(1,:); J = labels(2,:); L = labels(3,:); P = [I;J];
             Fx = zeros(1,Q); % 用来记录函数Fx的值
             weight = ones(1,Q) / Q; % 初始化权值
             
             %% 迭代
             for m = 1:M
                 %% 选择最优的弱分类器
-                % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
-                % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
+                % 弱分类器fm是一个二次函数，其中f(x) = x'*A*x+B*x+C
+                % fm = a * [(f(x1) > t) == (f(x2) > t)] + b
                 wc = obj.select_wc(points,labels,weight);
                 
                 %% 将最优弱分类器加入到强分类器中
@@ -168,12 +163,8 @@ classdef BoostProSSC
                 disp(num2str(error));
                 
                 %% 画图
-                if wc.k == 1
-                    x0 = 1; y0 = 0; z0 = -wc.t;
-                else
-                    x0 = 0; y0 = 1; z0 = -wc.t;
-                end
-                f = @(x,y) x0*x+y0*y+z0;
+                A = wc.A; B = wc.B; C = wc.C;
+                f = @(x,y) [x y]*A*[x y]' + B*[x y]' + C;
                 ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
                 drawnow;
             end
@@ -187,11 +178,10 @@ classdef BoostProSSC
             close all;
             rng(2)
             
-            ssc = learn.BoostSSC();
+            ssc = learn.BoostProSSC();
             
-            N = 500;
-            [points,labels] = learn.GenerateData.type6(N);
-            plot(points(1,:),points(2,:),'.');hold on;
+            N = 400;
+            [points,labels] = learn.GenerateData.type8(N);
             
             M = 10;
             ssc = ssc.train(points,labels,M);

@@ -172,5 +172,37 @@ classdef GenerateData
                 end
             end
         end
+        
+        function [points,labels] = type8(N)
+            % 有相近2范数的两个点标记为相似（到原点的距离相近）
+            K = N / 4; 
+            r1 = 2.5 * rand(1,K) + 0;   a1 = 2*pi*rand(1,K); points1 = [r1;r1] .* [cos(a1);sin(a1)];
+            r2 = 2.5 * rand(1,K) + 2.5; a2 = 2*pi*rand(1,K); points2 = [r2;r2] .* [cos(a2);sin(a2)];
+            r3 = 2.5 * rand(1,K) + 5;   a3 = 2*pi*rand(1,K); points3 = [r3;r3] .* [cos(a3);sin(a3)];
+            r4 = 2.5 * rand(1,K) + 7.5; a4 = 2*pi*rand(1,K); points4 = [r4;r4] .* [cos(a4);sin(a4)];
+            
+            plot(points1(1,:),points1(2,:),'+'); hold on;
+            plot(points2(1,:),points2(2,:),'*');
+            plot(points3(1,:),points3(2,:),'.');
+            plot(points4(1,:),points4(2,:),'o'); hold off;
+            
+            points = [points1 points2 points3 points4];
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    if norm(points(2,i),2) <= 2.5 && norm(points(2,j),2) <= 2.5
+                        labels = [labels [i,j,+1]'];
+                    elseif 2.5 < norm(points(2,i),2) && norm(points(2,i),2) <= 5 && 2.5 < norm(points(2,j),2) && norm(points(2,j),2) <= 5
+                        labels = [labels [i,j,+1]'];
+                    elseif 5 < norm(points(2,i),2) && norm(points(2,i),2) <= 7.5 && 5 < norm(points(2,j),2) && norm(points(2,j),2) <= 7.5
+                        labels = [labels [i,j,+1]'];
+                    elseif 7.5 < norm(points(2,i),2) && 7.5 < norm(points(2,j),2)
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
     end
 end
