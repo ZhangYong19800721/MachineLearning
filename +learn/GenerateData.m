@@ -42,10 +42,20 @@ classdef GenerateData
         function [points,labels] = type2(N)
             % 
             points = 20 * rand(2,N) - repmat([10 10]',1,N); % 产生x->[-10,10],y->[-10,10]上均匀分布的随机数
-            labels = ones(1,N);
+            labels = [];
             for i = 1:N
-                if abs(points(1,i) - points(2,i)) > 2
-                    labels(i) = -1;
+                for j = (i+1):N
+                    if points(2,i) < -5 && points(2,j) < -5
+                        labels = [labels [i,j,+1]'];
+                    elseif -5 <= points(2,i) && points(2,i) < 0 && -5 <= points(2,j) && points(2,j) < 0
+                        labels = [labels [i,j,+1]'];
+                    elseif  0 <= points(2,i) && points(2,i) < 5 &&  0 <= points(2,j) && points(2,j) < 5
+                        labels = [labels [i,j,+1]'];
+                    elseif  5 <= points(2,i) && points(2,i) <10 &&  5 <= points(2,j) && points(2,j) <10
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
                 end
             end
         end
