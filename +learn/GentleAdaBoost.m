@@ -20,44 +20,35 @@ classdef GentleAdaBoost
             %   weight 权值,和为1的非负向量
             % 输出：
             %   t 门限
-            %   a 在门限值右侧的(加权激活概率-加权非激活概率)
-            %   b 在门限值左侧的(加权激活概率-加权非激活概率)
+            %   a a+b等于在门限值右侧的(加权激活概率-加权非激活概率)
+            %   b b  等于在门限值左侧的(加权激活概率-加权非激活概率)
             %   err 误差值 err = sum(w * |z - (a*(x>th) + b)|^2)
             
             %% 初始化
             [K,N] = size(points); % K数据的维度，N数据点数
-            t = zeros(1,K); a = zeros(1,K); b = zeros(1,K); err = zeros(1,K);
             
-            %% 将标签和权值跟随点值进行排序
-            [x, sort_idx] = sort(points); % 对点值进行排序，将被作为门限使用
-            l = labels(sort_idx); w = weight(sort_idx); % 标签和权值跟随排序
-            
-            %% 计算累计和
-            Szw = cumsum(l.*w); Ezw = Szw(end); Sw  = cumsum(w);
+            %% 计算所有可能的门限值T 
+            % 将标签和权值跟随点值进行排序
+            [T, sort_idx] = sort(points); 
+            T = [T(1)-eps,T+eps]; % 得到所有可能的门限值
             
             %% 对所有可能的门限值计算a和b的值
-            b = Szw ./ Sw; % 所有可能的b值
-            zz = Sw == 1;
-            Sw(zz) = 0;
-            a = (Ezw - Szw) ./ (1-Sw) - b; % 所有可能的a值
-            Sw(zz) = 1;
+            l = labels(sort_idx); w = weight(sort_idx); % 标签和权值跟随排序
+            Szw = [0 cumsum(l.*w)]; Ezw = Szw(end); Sw  = [1e-100 cumsum(w)]; % 计算累计和
+            B = Szw ./ Sw; % 所有可能的b值
+            A = (Ezw - Szw) ./ max((1-Sw),1e-100) - B; % 所有可能的A值
             
             %% 计算误差
             % 误差的计算方式为
             %   error = sum(w.*(z-(a(i)*(x>th(i))+b(i))).^2);
             % 实际计算中使用下面效率更高的计算方式
-            err = sum(w.*l.^2) - 2*a.*(Ezw-Szw) - 2*b*Ezw + (a.^2 +2*a.*b) .* (1-Sw) + b.^2;
+            err = sum(w.*l.^2) - 2*A.*(Ezw-Szw) - 2*B*Ezw + (A.^2 +2*A.*B) .* (1-Sw) + B.^2;
             
             % 输出参数并找最优的门限
-            [err, n] = min(err);
-            
-            if n == N
-                t = x(n);
-            else
-                t = (x(n) + x(n+1))/2;
-            end
-            a = a(n);
-            b = b(n);
+            [err, best.i] = min(err);
+            t = T(best.i);
+            a = A(best.i);
+            b = B(best.i);
         end
         
         %% 选择最优弱分类器
@@ -143,8 +134,8 @@ classdef GentleAdaBoost
                 weight = weight ./ sum(weight); % 归一化权值
                 
                 %% 计算错误率
-%                 y = obj.predict(points);
-%                 err(m) = sum(xor(y,labels>0)) / N
+                y = obj.predict(points);
+                disp(sum(xor(y,labels>0)) / N);
             end
         end
     end
