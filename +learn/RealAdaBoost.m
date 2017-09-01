@@ -10,7 +10,7 @@ classdef RealAdaBoost
     
     methods(Access = private)
          %% 选择最优弱分类器
-        function [t,a,b,err] = select_stump(obj,points,labels,weight)
+        function [t,a,b,z] = select_stump(obj,points,labels,weight)
             %select_stump 在给定维度的情况下选择最优的stump参数
             % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % fm = ...
@@ -20,32 +20,33 @@ classdef RealAdaBoost
             %   weight 权值,和为1的非负向量
             % 输出：
             %   t 门限
-            %   a a+b等于在门限值右侧的(加权激活概率-加权非激活概率)
-            %   b b  等于在门限值左侧的(加权激活概率-加权非激活概率)
-            %   err 误差值 err = sum(w * |z - (a*(x>th) + b)|^2)
+            %   a a+b
+            %   b b  
+            %   z 弱分类器优化的目标函数
+            %   z=sum(weight.*exp(-labels.*fm))=2*sum(sqrt((W+).*(W-)))
             
             %% 初始化
-            [K,N] = size(points); % K数据的维度，N数据点数
+            [K,N] = size(points); % K是数据维度，N是数据点数
+            L = labels > 0; % L是0/1标签
+            epsilon = min(eps,1/N); % epsilon是一个小的正数
             
             %% 计算所有可能的门限值T 
-            % 将标签和权值跟随点值进行排序
-            [T, sort_idx] = sort(points); 
-            T = [T(1)-eps,T+eps]; % 得到所有可能的门限值
+            T = unique(points); % 去除重复值并排序
+            T = [T(1)-eps, (T(1:(end-1)) + T(2:end))/2,T(end)+eps]; % 得到所有可能的门限值
             
             %% 对所有可能的门限值计算a和b的值
-            l = labels(sort_idx); w = weight(sort_idx); % 标签和权值跟随排序
-            Szw = [0 cumsum(l.*w)]; Ezw = Szw(end); Sw  = [1e-100 cumsum(w)]; % 计算累计和
-            B = Szw ./ Sw; % 所有可能的b值
-            A = (Ezw - Szw) ./ max((1-Sw),1e-100) - B; % 所有可能的A值
+            A = zeros(size(T)); B = zeros(size(T)); Z = zeros(size(T));
+            for m = 1:length(T)
+                t = T(m); P = points > t;
+                W_P_1 = sum(weight( L& P)); W_P_2 = sum(weight( L&~P));
+                W_N_1 = sum(weight(~L& P)); W_N_2 = sum(weight(~L&~P));
+                Z(m) = 2 * sum(sqrt(W_P_1 * W_N_1) + sqrt(W_P_2 * W_N_2));
+                B(m) = 0.5 * log((W_P_2 + epsilon) / (W_N_2 + epsilon));
+                A(m) = 0.5 * log((W_P_1 + epsilon) / (W_N_1 + epsilon)) - B(m);
+            end
             
             %% 计算误差
-            % 误差的计算方式为
-            %   error = sum(w.*(z-(a(i)*(x>th(i))+b(i))).^2);
-            % 实际计算中使用下面效率更高的计算方式
-            err = sum(w.*l.^2) - 2*A.*(Ezw-Szw) - 2*B*Ezw + (A.^2 +2*A.*B) .* (1-Sw) + B.^2;
-            
-            % 输出参数并找最优的门限
-            [err, best.i] = min(err);
+            [z, best.i] = min(Z);
             t = T(best.i);
             a = A(best.i);
             b = B(best.i);
@@ -65,17 +66,17 @@ classdef RealAdaBoost
             
             %% 初始化
             [K,N] = size(points); % K 数据的维度，N数据点数
-            t = zeros(1,K); a = zeros(1,K); b = zeros(1,K); err = zeros(1,K);
+            T = zeros(1,K); A = zeros(1,K); B = zeros(1,K); Z = zeros(1,K);
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
-                [t(k),a(k),b(k),err(k)] = obj.select_stump(points(k,:),labels,weight);
+                [T(k),A(k),B(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
             end
             
             %% 设定stump的参数
             wc = learn.Stump();
-            [~, wc.k] = min(err);
-            wc.t = t(wc.k); wc.a = a(wc.k); wc.b = b(wc.k);
+            [~, wc.k] = min(Z);
+            wc.t = T(wc.k); wc.a = A(wc.k); wc.b = B(wc.k);
         end
     end
     
@@ -136,6 +137,16 @@ classdef RealAdaBoost
                 %% 计算错误率
                 y = obj.predict(points);
                 disp(sum(xor(y,labels>0)) / N);
+                
+                %% 画图
+                if wc.k == 1
+                    x0 = 1; y0 = 0; z0 = -wc.t;
+                else
+                    x0 = 0; y0 = 1; z0 = -wc.t;
+                end
+                f = @(x,y) x0*x+y0*y+z0;
+                ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+                drawnow;
             end
         end
     end
@@ -147,7 +158,7 @@ classdef RealAdaBoost
             close all;
             rng(2)
             
-            boost = learn.GentleAdaBoost();
+            boost = learn.RealAdaBoost();
             
             N = 1e4;
             [points,labels] = learn.GenerateData.type4(N);
