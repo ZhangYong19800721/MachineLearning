@@ -184,7 +184,7 @@ classdef GenerateData
             plot(points1(1,:),points1(2,:),'+'); hold on;
             plot(points2(1,:),points2(2,:),'*');
             plot(points3(1,:),points3(2,:),'.');
-            plot(points4(1,:),points4(2,:),'o'); hold off;
+            plot(points4(1,:),points4(2,:),'o'); 
             
             points = [points1 points2 points3 points4];
             labels = [];
