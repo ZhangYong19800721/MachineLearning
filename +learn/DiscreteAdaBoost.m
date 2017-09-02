@@ -166,8 +166,8 @@ classdef DiscreteAdaBoost
             
             boost = learn.DiscreteAdaBoost();
             
-            N = 1e3;
-            [points,labels] = learn.GenerateData.type0(N);
+            N = 1e4;
+            [points,labels] = learn.GenerateData.type4(N);
             
             figure;
             group1 = points(:,labels== 1);

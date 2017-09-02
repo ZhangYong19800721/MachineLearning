@@ -1,5 +1,11 @@
 classdef GenerateData
     methods(Static)
+        function [points,labels] = type0(N)
+            %
+            points = 10 * rand(2,N); % 产生x->[0,10],y->[0,10]上均匀分布的随机数
+            labels = 2 * (sqrt(points(1,:).^2 + points(2,:).^2) <= 5) - 1;
+        end
+        
         function [points,labels] = type1(N)
             %GENERATEDATA 产生训练数据
             % 非线性可分双弧形
