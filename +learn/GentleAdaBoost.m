@@ -12,7 +12,7 @@ classdef GentleAdaBoost
          %% 选择最优弱分类器
         function [t,a,b,err] = select_stump(obj,points,labels,weight)
             %select_stump 在给定维度的情况下选择最优的stump参数
-            % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
+            % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % fm = a * (x(k) > t) + b
             % 输入：
             %   points 数据点（只包含第k维的数据，只有一行）
