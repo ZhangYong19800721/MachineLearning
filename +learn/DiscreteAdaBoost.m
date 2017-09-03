@@ -14,7 +14,7 @@ classdef DiscreteAdaBoost
         function [t,a,b,z] = select_stump(obj,points,labels,weight)
             %select_t 在给定维度的情况下选择最优的门限值
             % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
-            % 对于DiscreteAdaBoost，a=+2，b=-1，这样stump函数返回的值只能是+1或-1
+            % 对于DiscreteAdaBoost(a=+2，b=-1)或(a=-2,b=+1)这样stump函数返回的值只能是+1或-1
             % fm = a * (x(k) > t) + b
             % 输入：
             %   points 数据点（只包含第k维的数据，只有一行）
