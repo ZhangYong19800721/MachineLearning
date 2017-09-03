@@ -67,5 +67,5 @@ for n = 1:N
     end
 end
 
-save('labels_pos.mat',labels);
+save('labels_pos.mat','labels');
 
