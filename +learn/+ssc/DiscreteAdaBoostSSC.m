@@ -77,7 +77,7 @@ classdef DiscreteAdaBoostSSC
             end
             
             %% 设定stump的参数
-            wc = learn.StumpSSC();
+            wc = learn.ssc.StumpSSC();
             [~, wc.k] = max(Z);
             wc.t = T(wc.k); wc.a = A(wc.k); wc.b = B(wc.k);
         end
@@ -183,10 +183,10 @@ classdef DiscreteAdaBoostSSC
             close all;
             rng(2)
             
-            ssc = learn.DiscreteAdaBoostSSC();
+            ssc = learn.ssc.DiscreteAdaBoostSSC();
             
             N = 500;
-            [points,labels] = learn.GenerateData.type6(N);
+            [points,labels] = learn.data.GenerateData.type6(N);
             plot(points(1,:),points(2,:),'.');hold on;
             
             M = 30;
