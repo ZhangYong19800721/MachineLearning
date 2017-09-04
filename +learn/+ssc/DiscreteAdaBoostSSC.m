@@ -123,7 +123,7 @@ classdef DiscreteAdaBoostSSC
         
         %% 训练
         function obj = train(obj,points,labels,M)
-            % train 训练GentleAdaBoost模型
+            % train 训练DiscreteAdaBoostSSC模型
             % 输入：
             % points 数据点
             % labels 标签，共有3行(第1/2行是数据点下标，第3行是相似标签+1或-1,每1列表示一个样本对)
@@ -141,8 +141,8 @@ classdef DiscreteAdaBoostSSC
             %% 迭代
             for m = 1:M
                 %% 选择最优的弱分类器
-                % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
-                % fm = a * (x(k) > t) + b
+                % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
+                % fm = a * [(f(x1) > t)==(f(x2) > t)] + b
                 wc = obj.select_wc(points,labels,weight);
                 
                 %% 将最优弱分类器加入到强分类器中
