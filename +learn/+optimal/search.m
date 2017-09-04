@@ -25,7 +25,7 @@ function lamda = search(F,x,d,a,b,epsilon)
     
     lamda = (a + b) / 2;
     if F_x_ad < F.object(x+lamda*d)
-        lamda = optimal.GoldenSection(F,x,d,a0,min(alfa0,lamda),epsilon);
+        lamda = learn.optimal.search(F,x,d,a0,min(alfa0,lamda),epsilon);
     end
 end
 
