@@ -38,14 +38,10 @@ classdef DiscreteAdaBoost
             for m = 1:length(T)
                 t = T(m); 
                 p =  2 * (points > t) - 1; 
-                q = -2 * (points > t) + 1;
-                Z1 = sum(weight.*labels.*p);
-                Z2 = sum(weight.*labels.*q);
-                if Z1 > Z2
-                    Z(m) = Z1; A(m) =  2; B(m) = -1;
-                else
-                    Z(m) = Z2; A(m) = -2; B(m) =  1;
-                end
+                q = sum(weight.*labels.*p);
+                Z(m) = abs(q);
+                A(m) = sign(q) *  2; 
+                B(m) = sign(q) * -1;
             end
             
             %% 输出参数并找最优的门限
@@ -166,7 +162,7 @@ classdef DiscreteAdaBoost
             
             boost = learn.boost.DiscreteAdaBoost();
             
-            N = 1e3;
+            N = 1e4;
             [points,labels] = learn.data.GenerateData.type4(N);
             
             figure;
