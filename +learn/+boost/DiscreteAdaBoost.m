@@ -77,7 +77,7 @@ classdef DiscreteAdaBoost
             end
             
             %% 设定stump的参数
-            wc = learn.Stump();
+            wc = learn.boost.Stump();
             [~, wc.k] = max(Z);
             wc.t = T(wc.k); wc.a = A(wc.k); wc.b = B(wc.k);
         end
@@ -164,10 +164,10 @@ classdef DiscreteAdaBoost
             close all;
             rng(2)
             
-            boost = learn.DiscreteAdaBoost();
+            boost = learn.boost.DiscreteAdaBoost();
             
             N = 1e3;
-            [points,labels] = learn.GenerateData.type4(N);
+            [points,labels] = learn.data.GenerateData.type4(N);
             
             figure;
             group1 = points(:,labels== 1);
