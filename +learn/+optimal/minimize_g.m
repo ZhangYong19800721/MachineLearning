@@ -12,7 +12,7 @@ function [x,y] = minimize_g(F,x0,parameters)
 %       y 最小的函数值
     
     %% 初始化
-    ob = learn.Observer('目标函数值',1,100); % 初始化观察者
+    ob = learn.tools.Observer('目标函数值',1,100); % 初始化观察者
     inc_x = zeros(size(x0)); % 参数的递增量
     m = parameters.momentum;
     r = parameters.learn_rate;
