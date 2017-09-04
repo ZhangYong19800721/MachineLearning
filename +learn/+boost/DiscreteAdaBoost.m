@@ -11,7 +11,7 @@ classdef DiscreteAdaBoost
     
     methods(Access = private)
          %% 选择最优弱分类器
-        function [t,a,b,z] = select_stump(obj,points,labels,weight)
+        function [t,z] = select_stump(obj,points,labels,weight)
             %select_t 在给定维度的情况下选择最优的门限值
             % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % 对于DiscreteAdaBoost(a=+2，b=-1)或(a=-2,b=+1)这样stump函数返回的值只能是+1或-1
@@ -38,17 +38,12 @@ classdef DiscreteAdaBoost
             for m = 1:length(T)
                 t = T(m); 
                 p =  2 * (points > t) - 1; 
-                q = sum(weight.*labels.*p);
-                Z(m) = abs(q);
-                A(m) = sign(q) *  2; 
-                B(m) = sign(q) * -1;
+                Z(m)  = sum(weight.*labels.*p);
             end
             
             %% 输出参数并找最优的门限
-            [z, best.i] = max(Z);
-            t = T(best.i);
-            a = A(best.i);
-            b = B(best.i);
+            [~, best.i] = max(abs(Z));
+            z = Z(best.i); t = T(best.i);
         end
         
         %% 选择最优弱分类器
@@ -65,17 +60,17 @@ classdef DiscreteAdaBoost
             
             %% 初始化
             [K,N] = size(points); % K 数据的维度，N数据点数
-            T = zeros(1,K); A = zeros(1,K); B = zeros(1,K); Z = zeros(1,K);
+            T = zeros(1,K); Z = zeros(1,K);
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
-                [T(k),A(k),B(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
+                [T(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
             end
             
             %% 设定stump的参数
             wc = learn.boost.Stump();
-            [~, wc.k] = max(Z);
-            wc.t = T(wc.k); wc.a = A(wc.k); wc.b = B(wc.k);
+            [~, wc.k] = max(abs(Z));
+            wc.t = T(wc.k); wc.a = 2; wc.b = -1;
         end
     end
     
