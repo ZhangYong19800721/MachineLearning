@@ -27,6 +27,7 @@ classdef DiscreteAdaBoostSSCPro
             
             %% 初始化
             [K,N] = size(points); % K数据的维度，N数据点数
+            I = labels(1,:); J = labels(2,:); L = labels(3,:); P = [I;J];
             
             %% 计算所有可能的门限值T 
             T = unique(points); % 去除重复值并排序
@@ -35,11 +36,11 @@ classdef DiscreteAdaBoostSSCPro
             %% 对所有可能的门限值计算a,b,z
             A = zeros(size(T)); B = zeros(size(T)); Z = zeros(size(T));
             for m = 1:length(T)
-                t = T(m); 
-                p =  2 * (points > t) - 1; 
-                q = -2 * (points > t) + 1;
-                Z1 = sum(weight.*labels.*p);
-                Z2 = sum(weight.*labels.*q);
+                t = T(m); pos = points > t;
+                p =  2 * (pos(I) == pos(J)) - 1; 
+                q = -2 * (pos(I) == pos(J)) + 1;
+                Z1 = sum(weight.*L.*p);
+                Z2 = sum(weight.*L.*q);
                 if Z1 > Z2
                     Z(m) = Z1; A(m) =  2; B(m) = -1;
                 else
@@ -77,7 +78,7 @@ classdef DiscreteAdaBoostSSCPro
             
             %% 迭代寻优二次函数的参数
             [~, best.k] = max(Z); best.t = T(best.k); best.a = A(best.k); best.b = B(best.k); 
-            wc = learn.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
+            wc = learn.ssc.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
             wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
             
             
@@ -85,19 +86,36 @@ classdef DiscreteAdaBoostSSCPro
     end
     
     methods(Access = public)
-        %% 判决
-        function [y,F] = predict(obj,points)
-            %PREDICT 对数据点进行分类，正例为1，反例为0
-            % 使用经过训练的模型判断数据点的分类
-    
+		  %% 哈希编码
+        function c = hash(obj,points)
+            %hash 计算数据点的哈希码
+            % 该hash码是保留了相似性的hash码 
+            
             %% 初始化
             M = length(obj.weak); % M弱分类器的个数
             [~,N] = size(points); % N数据点数
-            f = zeros(M,N); % 存储弱分类器的分类结果
+            c = false(M,N);       % 存放hash码的变量，每一列对应一个数据点
+            
+            %% 计算数据点对应的M个比特
+            for m = 1:M
+                A = obj.weak{m}.A; B = obj.weak{m}.B; C = obj.weak{m}.C;
+                c(m,:) = (0.5 * sum((points' * A) .* points',2)' + B * points + repmat(C,1,N)) > 0;
+            end
+        end
+
+        %% 判决
+        function [y,F] = predict(obj,points,pairs)
+            %PREDICT 判断两个数据点是否相似，相似为正1，不相似为反0
+            %
+    
+            %% 初始化
+            M = length(obj.weak); % M弱分类器的个数
+            [~,Q] = size(pairs);  % Q数据对数
+            f = zeros(M,Q); % 存储弱分类器的分类结果
             
             %% 计算所有弱分类器的输出
             for m=1:M
-                f(m,:) = obj.weak{m}.compute(points); 
+                f(m,:) = obj.weak{m}.compute(points,pairs);
             end
             
             %% 累加弱分类器的输出并判决
@@ -107,51 +125,50 @@ classdef DiscreteAdaBoostSSCPro
         
         %% 训练
         function obj = train(obj,points,labels,M)
-            % train 训练GentleAdaBoost模型
+            % train 训练DiscreteAdaBoostSSCPro模型
             % 输入：
             % points 数据点
-            % labels 标签，+1或-1
+            % labels 标签，共有3行(第1/2行是数据点下标，第3行是相似标签+1或-1,每1列表示一个样本对)
             % M 弱分类器的个数
             % 输出：
-            % obj 经过训练的boost对象
+            % obj 经过训练的DiscreteAdaBoostSSCPro对象
             
             %% 初始化
             [~,N] = size(points); % 得到数据点数目
-            Fx = zeros(1,N); % 用来记录函数Fx的值
-            weight = ones(1,N) / N; % 初始化权值
+            [~,Q] = size(labels); % 得到数据对数目
+            I = labels(1,:); J = labels(2,:); L = labels(3,:); P = [I;J];
+            Fx = zeros(1,Q); % 用来记录函数Fx的值
+            weight = ones(1,Q) / Q; % 初始化权值
             
             %% 迭代
             for m = 1:M
                 %% 选择最优的弱分类器
-                % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
-                % fm = a * (x(k) > t) + b
+                % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
+                % fm = a * [(f(x1) > t)==(f(x2) > t)] + b
                 wc = obj.select_wc(points,labels,weight);
                 
                 %% 将最优弱分类器加入到强分类器中
                 obj.weak{1+length(obj.weak)} = wc;
                 
                 %% 计算弱分类器的输出，计算加权值并更新强分类器的函数值
-                fm = wc.compute(points); % 计算弱分类器的输出
-                err = weight * xor((fm > 0),(labels > 0))';
+                fm = wc.compute(points,P); % 计算弱分类器的输出
+                err = weight * xor((fm > 0),(L > 0))';
                 err = max(err,1e-100);
                 c = 0.5 * log((1 - err)/err);
                 obj.alfa = [obj.alfa c];
                 Fx = Fx + c.*fm; % 更新强分类器
                 
                 %% 更新并归一化权值
-                weight = weight .* exp(-c.*labels.*fm); % 更新权值
+                weight = weight .* exp(-c.*L.*fm); % 更新权值
                 weight = weight ./ sum(weight); % 归一化权值
                 
                 %% 计算错误率
-                disp(sum(xor(Fx>0,labels>0)) / N);
+                disp(sum(xor(Fx>0,L>0)) / Q);
                 
                 %% 画图
-                if wc.k == 1
-                    x0 = 1; y0 = 0; z0 = -wc.t;
-                else
-                    x0 = 0; y0 = 1; z0 = -wc.t;
-                end
-                f = @(x,y) x0*x+y0*y+z0;
+                A = wc.A; B = wc.B; C = wc.C;
+                f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
+                warning('off','MATLAB:ezplotfeval:NotVectorized');
                 ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
                 drawnow;
             end
@@ -160,24 +177,19 @@ classdef DiscreteAdaBoostSSCPro
     
     %% 单元测试
     methods(Static)
-        function boost = unit_test()
+        function ssc = unit_test()
             clear all;
             close all;
             rng(2)
             
-            boost = learn.DiscreteAdaBoost();
+            ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
-            N = 1e3;
-            [points,labels] = learn.GenerateData.type4(N);
+            N = 500;
+            [points,labels] = learn.data.GenerateData.type9(N);
+            plot(points(1,:),points(2,:),'.');hold on;
             
-            figure;
-            group1 = points(:,labels== 1);
-            group2 = points(:,labels==-1);
-            plot(group1(1,:),group1(2,:),'+'); hold on;
-            plot(group2(1,:),group2(2,:),'.'); 
-            
-            M = 300;
-            boost = boost.train(points,labels,M);
+            M = 1;
+            ssc = ssc.train(points,labels,M);
         end
     end
 end
