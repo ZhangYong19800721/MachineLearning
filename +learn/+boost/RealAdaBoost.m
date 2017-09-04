@@ -74,7 +74,7 @@ classdef RealAdaBoost
             end
             
             %% 设定stump的参数
-            wc = learn.Stump();
+            wc = learn.boost.Stump();
             [~, wc.k] = min(Z);
             wc.t = T(wc.k); wc.a = A(wc.k); wc.b = B(wc.k);
         end
@@ -135,8 +135,7 @@ classdef RealAdaBoost
                 weight = weight ./ sum(weight); % 归一化权值
                 
                 %% 计算错误率
-                y = obj.predict(points);
-                disp(sum(xor(y,labels>0)) / N);
+                disp(sum(xor(Fx>0,labels>0)) / N);
                 
                 %% 画图
                 if wc.k == 1
@@ -158,10 +157,10 @@ classdef RealAdaBoost
             close all;
             rng(2)
             
-            boost = learn.RealAdaBoost();
+            boost = learn.boost.RealAdaBoost();
             
             N = 1e4;
-            [points,labels] = learn.GenerateData.type4(N);
+            [points,labels] = learn.data.GenerateData.type4(N);
             
             figure;
             group1 = points(:,labels== 1);

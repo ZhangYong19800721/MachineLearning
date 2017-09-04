@@ -73,7 +73,7 @@ classdef GentleAdaBoost
             end
             
             %% 设定stump的参数
-            wc = learn.Stump();
+            wc = learn.boost.Stump();
             [~, wc.k] = min(err);
             wc.t = t(wc.k); wc.a = a(wc.k); wc.b = b(wc.k);
         end
@@ -134,8 +134,17 @@ classdef GentleAdaBoost
                 weight = weight ./ sum(weight); % 归一化权值
                 
                 %% 计算错误率
-                y = obj.predict(points);
-                disp(sum(xor(y,labels>0)) / N);
+                disp(sum(xor(Fx>0,labels>0)) / N);
+                
+                %% 画图
+                if wc.k == 1
+                    x0 = 1; y0 = 0; z0 = -wc.t;
+                else
+                    x0 = 0; y0 = 1; z0 = -wc.t;
+                end
+                f = @(x,y) x0*x+y0*y+z0;
+                ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+                drawnow;
             end
         end
     end
@@ -147,10 +156,10 @@ classdef GentleAdaBoost
             close all;
             rng(2)
             
-            boost = learn.GentleAdaBoost();
+            boost = learn.boost.GentleAdaBoost();
             
             N = 1e4;
-            [points,labels] = learn.GenerateData.type4(N);
+            [points,labels] = learn.data.GenerateData.type4(N);
             
             figure;
             group1 = points(:,labels== 1);
