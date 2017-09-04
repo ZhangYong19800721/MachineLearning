@@ -10,19 +10,17 @@ classdef DiscreteAdaBoostSSCPro
     
     methods(Access = private)
          %% 选择最优弱分类器
-        function [t,a,b,z] = select_stump(obj,points,labels,weight)
+        function [t,z] = select_stump(obj,points,labels,weight)
             %select_stump 在给定维度的情况下选择最优的stump参数
             % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
-            % 对于DiscreteAdaBoost(a=+2，b=-1)或(a=-2,b=+1)这样stump函数返回的值只能是+1或-1
+            % 对于DiscreteAdaBoost(a=+2，b=-1)这样stump函数返回的值只能是+1或-1
             % 输入：
             %   points 数据点（只包含第k维的数据，只有一行）
             %   labels 标签,共有3行(第1/2行是数据点下标，第3行是相似标签+1或-1,每一列表示一个样本对)
             %   weight 权值,和为1的非负向量，与labels的列数相同
             % 输出：
             %   t 门限
-            %   a 最优的a值+2或-2
-            %   b 最优的b值+1或-1
             %   z 弱分类器优化的目标函数z=sum(weight.*labels.*fm)
             
             %% 初始化
@@ -34,21 +32,16 @@ classdef DiscreteAdaBoostSSCPro
             T = [T(1)-eps, (T(1:(end-1)) + T(2:end))/2, T(end)+eps]; % 得到所有可能的门限值
             
             %% 对所有可能的门限值计算a,b,z
-            A = zeros(size(T)); B = zeros(size(T)); Z = zeros(size(T));
+            Z = zeros(size(T));
             for m = 1:length(T)
                 t = T(m); pos = points > t;
                 p =  2 * (pos(I) == pos(J)) - 1; 
-                q = sum(weight.*L.*p);
-                Z(m) = abs(q);
-                A(m) = sign(q) *  2; 
-                B(m) = sign(q) * -1;
+                Z(m) = sum(weight.*L.*p);
             end
             
             %% 输出参数并找最优的门限
-            [z, best.i] = max(Z);
-            t = T(best.i);
-            a = A(best.i);
-            b = B(best.i);
+            [~, best.i] = max(abs(Z));
+            z = Z(best.i); t = T(best.i);
         end
         
         %% 选择最优弱分类器
@@ -65,15 +58,15 @@ classdef DiscreteAdaBoostSSCPro
             
             %% 初始化
             [K,N] = size(points); % K 数据的维度，N数据点数
-            T = zeros(1,K); A = zeros(1,K); B = zeros(1,K); Z = zeros(1,K);
+            T = zeros(1,K); Z = zeros(1,K);
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
-                [T(k),A(k),B(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
+                [T(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
             end
             
             %% 迭代寻优二次函数的参数
-            [~, best.k] = max(Z); best.t = T(best.k); best.a = A(best.k); best.b = B(best.k); 
+            [~, best.k] = max(abs(Z)); best.t = T(best.k); best.a = 2; best.b = 1; 
             wc = learn.ssc.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
             wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
             x0 = [reshape(wc.A,[],1); reshape(wc.B,[],1); wc.C];
