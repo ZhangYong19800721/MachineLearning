@@ -37,15 +37,11 @@ classdef DiscreteAdaBoostSSC
             A = zeros(size(T)); B = zeros(size(T)); Z = zeros(size(T));
             for m = 1:length(T)
                 t = T(m); pos = points > t;
-                p =  2 * (pos(I) == pos(J)) - 1; 
-                q = -2 * (pos(I) == pos(J)) + 1;
-                Z1 = sum(weight.*L.*p);
-                Z2 = sum(weight.*L.*q);
-                if Z1 > Z2
-                    Z(m) = Z1; A(m) =  2; B(m) = -1;
-                else
-                    Z(m) = Z2; A(m) = -2; B(m) =  1;
-                end
+                p = 2 * (pos(I) == pos(J)) - 1;
+                q = sum(weight.*L.*p);
+                Z(m) = abs(q);
+                A(m) = sign(q) *  2; 
+                B(m) = sign(q) * -1;
             end
             
             %% 输出参数并找最优的门限
