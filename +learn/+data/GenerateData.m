@@ -210,5 +210,22 @@ classdef GenerateData
                 end
             end
         end
+        
+        function [points,labels] = type9(N)
+            % Ò»±ýÐÎ
+            points = 20 * rand(2,N) - repmat([10 10]',1,N);
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    if norm(points(:,i),2) < 5 && norm(points(:,j),2) < 5
+                        labels = [labels [i,j,+1]'];
+                    elseif 5 <= norm(points(:,i),2) && 5 <= norm(points(:,j),2)
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
     end
 end
