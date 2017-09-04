@@ -80,8 +80,21 @@ classdef DiscreteAdaBoostSSCPro
             [~, best.k] = max(Z); best.t = T(best.k); best.a = A(best.k); best.b = B(best.k); 
             wc = learn.ssc.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
             wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
-            
-            
+            x0 = [reshape(wc.A,[],1); reshape(wc.B,[],1); wc.C];
+            F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
+%             parameters.learn_rate = 0.01; % 学习速度
+%             parameters.momentum = 0.9;   % 加速动量
+%             parameters.epsilon  = 1e-3;  % 当梯度的范数小于epsilon时迭代结束
+%             parameters.max_it = 1e5;     % 最大迭代次数
+%             x = learn.optimal.minimize_g(F,x0,parameters);
+
+            parameters.epsilon1  = 1e-3;  % 
+            parameters.epsilon2  = 1e-3;  %
+            parameters.max_it = 1e5;     % 最大迭代次数
+            parameters.reset = 100;     % 
+            parameters.dis = 10;     % 
+            x = learn.optimal.minimize_cg(F,x0,parameters);
+            wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end);
         end
     end
     
@@ -169,7 +182,8 @@ classdef DiscreteAdaBoostSSCPro
                 A = wc.A; B = wc.B; C = wc.C;
                 f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
                 warning('off','MATLAB:ezplotfeval:NotVectorized');
-                ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+                % ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+                ezplot(f,[-10,10,-10,10]);
                 drawnow;
             end
         end
