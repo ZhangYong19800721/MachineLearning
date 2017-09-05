@@ -1,31 +1,35 @@
-function [x1,z1] = minimize_lm(F,x0,epsilon,max_it)
-%LevenbergMarquardt 一种求解最小二乘问题的数值算法
+function [x1,z1] = minimize_lm(F,x0,parameters)
+%minimize_lm LevenbergMarquardt算法，一种求解最小二乘问题的数值算法
 %   是一种改进的高斯牛顿法，它的搜索方向介于高斯牛顿方向和最速下降方向之间
+%   输入：
+%       F 调用F.jacobi(x)计算目标函数的jacobi矩阵，调用F.vector(x)计算目标函数的各个分项值f = [f1,f2,f3,...,fn]
+%       目标函数为sum(f.^2)
+%       x0 迭代的起始位置
+%       parameters.epsilon 当梯度的范数小于epsilon时迭代结束
+%       parameters.max_it 最大迭代次数
+%   输出：
+%       x 最优的参数解
+%       y 最小的函数值
 
     alfa = 0.01; beda = 10; 
     D = length(x0); % 数据的维度
-    x1 = x0; z1 = [];
+    x1 = x0;
     
-    ob_window_size = 100;
-    ob = learn.Observer('残差',1,ob_window_size,'xxx');
-    
-    for it = 1:max_it
+    for it = 1:parameters.max_it
         j1 = F.jacobi(x1);
-        f1 = F.myfunc(x1);
+        f1 = F.vector(x1);
         g1 = j1' * f1;
-        ng = norm(g1);
-        if ng < epsilon
+        ng1 = norm(g1);
+        if ng1 < parameters.epsilon
             break;
         end
         delta = -1 * (j1'*j1 + alfa * eye(D)) \ g1;
         x2 = x1 + delta;
-        f2 = F.myfunc(x2);
+        f2 = F.vector(x2);
         z1 = norm(f1,2).^2;
         z2 = norm(f2,2).^2;
         
-        description = strcat('迭代次数:',num2str(it));
-        description = strcat(description,strcat(' 梯度模:',num2str(ng)));
-        ob = ob.showit(z1,description);
+        disp(sprintf('迭代次数:%d 梯度模:%f',it,ng1));
         
         if z1 > z2
             alfa = alfa / beda;
