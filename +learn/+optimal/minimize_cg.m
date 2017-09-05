@@ -4,10 +4,10 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %   F 函数对象，调用F.object(x)计算目标函数在x处的值，调用F.gradient(x)计算目标函数在x处的梯度
 %   x0 迭代的起始位置
 %   parameters.epsilon 当梯度模小于epsilon时停止迭代
-%   parameters.alfa alfa*epsilon是线性搜索的停止条件
+%   parameters.alfa 线性搜索区间倍数
+%   parameters.beda 线性搜索的停止条件
 %   parameters.max_it 最大迭代次数
 %   parameters.reset 重置条件
-%   parameters.dis 线性搜索的最大距离  
 
     %ob = learn.tools.Observer('函数值',1,100);
     %% 计算起始位置的函数值、梯度、梯度模
@@ -18,13 +18,13 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
     d1 = -g1; % 初始搜索方向为负梯度方向
     for it = 1:parameters.max_it
         if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
-        alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon); % 沿d1方向线搜索
+        alfa = learn.optimal.search(F,x1,d1,0,parameters.alfa,parameters.beda); % 沿d1方向线搜索
         x2 = x1 + alfa * d1; y2 = F.object(x2); % 迭代到新的位置x2，并计算函数值
         c1 = mod(it,parameters.reset) == 0; % 到达重置点
         c2 = y1 < y2; %表明d1方向不是一个下降方向
         if c1 || c2
             d1 = -g1; % 设定搜索方向为负梯度方向
-            alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon); % 沿负梯度方向线搜索
+            alfa = learn.optimal.search(F,x1,d1,0,parameters.alfa,parameters.beda); % 沿负梯度方向线搜索
             x2 = x1 + alfa * d1; y2 = F.object(x2); g2 = F.gradient(x2); d2 = -g2; ng2 = norm(g2); % 迭代到新的位置x2，并计算函数值、梯度、搜索方向、梯度模
             x1 = x2; d1 = d2; g1 = g2; y1 = y2; ng1 = ng2;
             disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f ',y1,it,ng1));
