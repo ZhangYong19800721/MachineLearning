@@ -32,7 +32,7 @@ classdef DiscreteAdaBoostSSC
             T = [T(1)-eps, (T(1:(end-1)) + T(2:end))/2, T(end)+eps]; % 得到所有可能的门限值
             
             %% 对所有可能的门限值计算a,b,z
-            A = zeros(size(T)); B = zeros(size(T)); Z = zeros(size(T));
+            Z = zeros(size(T));
             for m = 1:length(T)
                 t = T(m); pos = points > t;
                 p = 2 * (pos(I) == pos(J)) - 1;
