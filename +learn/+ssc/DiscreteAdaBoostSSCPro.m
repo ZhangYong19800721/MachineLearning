@@ -71,7 +71,7 @@ classdef DiscreteAdaBoostSSCPro
             parameters.learn_rate = 1e-2; % 学习速度
             parameters.momentum = 0; % 加速动量
             parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 5e3; % 最大迭代次数
+            parameters.max_it = 2e3; % 最大迭代次数
             x = learn.optimal.maximize_g(F,x0,parameters);
             
 %             parameters.epsilon = 1e-3; %当梯度模小于epsilon时停止迭代
