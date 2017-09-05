@@ -196,13 +196,15 @@ classdef GenerateData
             labels = [];
             for i = 1:N
                 for j = (i+1):N
-                    if norm(points(2,i),2) <= 2.5 && norm(points(2,j),2) <= 2.5
+                    norm_pi = norm(points(:,i),2); 
+                    norm_pj = norm(points(:,j),2); 
+                    if norm_pi <= 2.5 && norm_pj <= 2.5
                         labels = [labels [i,j,+1]'];
-                    elseif 2.5 < norm(points(2,i),2) && norm(points(2,i),2) <= 5 && 2.5 < norm(points(2,j),2) && norm(points(2,j),2) <= 5
+                    elseif 2.5 < norm_pi && norm_pi <= 5 && 2.5 < norm_pj && norm_pj <= 5
                         labels = [labels [i,j,+1]'];
-                    elseif 5 < norm(points(2,i),2) && norm(points(2,i),2) <= 7.5 && 5 < norm(points(2,j),2) && norm(points(2,j),2) <= 7.5
+                    elseif 5 < norm_pi && norm_pi <= 7.5 && 5 < norm_pj && norm_pj <= 7.5
                         labels = [labels [i,j,+1]'];
-                    elseif 7.5 < norm(points(2,i),2) && 7.5 < norm(points(2,j),2)
+                    elseif 7.5 < norm_pi && 7.5 < norm_pj
                         labels = [labels [i,j,+1]'];
                     else
                         labels = [labels [i,j,-1]'];
