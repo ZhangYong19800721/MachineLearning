@@ -71,7 +71,7 @@ classdef DiscreteAdaBoostSSCPro
             parameters.learn_rate = 1e-2; % 学习速度
             parameters.momentum = 0; % 加速动量
             parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 1e4; % 最大迭代次数
+            parameters.max_it = 5e3; % 最大迭代次数
             [x,y] = learn.optimal.maximize_g(F,x0,parameters);
             wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end); wc.a = 2; wc.b = -1; 
         end
@@ -178,7 +178,7 @@ classdef DiscreteAdaBoostSSCPro
             ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
             N = 400;
-            [points,labels] = learn.data.GenerateData.type8(N);
+            [points,labels] = learn.data.GenerateData.type9(N);
             
             M = 3;
             ssc = ssc.train(points,labels,M);
