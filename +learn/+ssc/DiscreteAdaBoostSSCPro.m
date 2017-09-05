@@ -68,8 +68,8 @@ classdef DiscreteAdaBoostSSCPro
             x0 = [reshape(A,[],1); reshape(B,[],1); C];
             F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
 
-            parameters.learn_rate = 1e-2; % 学习速度
-            parameters.momentum = 0; % 加速动量
+            parameters.learn_rate = 0.1; % 学习速度
+            parameters.momentum = 0.9; % 加速动量
             parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
             parameters.max_it = 2e3; % 最大迭代次数
             x = learn.optimal.maximize_g(F,x0,parameters);
