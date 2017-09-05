@@ -23,7 +23,7 @@ classdef DAB_SSC_Pro_Aid
             
             %% 
             f = 0.5 * sum((obj.points' * A) .* obj.points',2)' + B * obj.points + repmat(C,1,N); % 计算所有点的f函数值
-            h = +learn.tools.sigmoid(f); % 计算所有点的h函数值
+            h = learn.tools.sigmoid(f); % 计算所有点的h函数值
             g_h_C = ones(1,N); % h函数对C的梯度
             g_h_B = obj.points; % h函数对B的梯度
             g_h_A = zeros(K*K,N);
