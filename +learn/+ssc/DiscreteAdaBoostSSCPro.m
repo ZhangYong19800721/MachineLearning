@@ -57,32 +57,23 @@ classdef DiscreteAdaBoostSSCPro
             %   wc 最优的弱分类器
             
             %% 初始化
-            [K,N] = size(points); % K 数据的维度，N数据点数
-            T = zeros(1,K); Z = zeros(1,K);
-            
-            %% 对每一个维度，计算最优的stump参数
-            for k = 1:K
-                [T(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
-            end
+            [K,N] = size(points); % K数据的维度，N数据点数
             
             %% 迭代寻优二次函数的参数
-            [~, best.k] = max(abs(Z)); best.t = T(best.k); best.z = Z(best.k); best.a = 2; best.b = -1; 
-            wc = learn.ssc.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
-            wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
-            x0 = [reshape(wc.A,[],1); reshape(wc.B,[],1); wc.C];
+            wc = learn.ssc.QuadraticSSC();
+            A = [2 0; 0 2]; B = [0 0]; C = -25;
+            % A = randn(K); B = randn(1,K); C = randn(1);
+            % f = 0.5 * sum((points' * A) .* points',2)' + B * points + repmat(C,1,N);
+            % C = -median(f);
+            x0 = [reshape(A,[],1); reshape(B,[],1); C];
             F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
 
-            parameters.epsilon = 1e-3; % 
-            parameters.alfa = 1e-4; %
-            parameters.max_it = 1e5; % 最大迭代次数
-            parameters.reset = 1000; % 
-            parameters.dis = 10; % 
-            if best.z > 0
-                x = learn.optimal.maximize_cg(F,x0,parameters);
-            else
-                x = learn.optimal.minimize_cg(F,x0,parameters);
-            end
-            wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end);
+            parameters.learn_rate = 1e-2; % 学习速度
+            parameters.momentum = 0; % 加速动量
+            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
+            parameters.max_it = 1e4; % 最大迭代次数
+            [x,y] = learn.optimal.maximize_g(F,x0,parameters);
+            wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end); wc.a = 2; wc.b = -1; 
         end
     end
     
@@ -187,7 +178,7 @@ classdef DiscreteAdaBoostSSCPro
             ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
             N = 400;
-            [points,labels] = learn.data.GenerateData.type9(N);
+            [points,labels] = learn.data.GenerateData.type8(N);
             
             M = 3;
             ssc = ssc.train(points,labels,M);
