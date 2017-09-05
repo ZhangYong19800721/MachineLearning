@@ -66,18 +66,22 @@ classdef DiscreteAdaBoostSSCPro
             end
             
             %% 迭代寻优二次函数的参数
-            [~, best.k] = max(abs(Z)); best.t = T(best.k); best.a = 2; best.b = 1; 
+            [~, best.k] = max(abs(Z)); best.t = T(best.k); best.z = Z(best.k); best.a = 2; best.b = -1; 
             wc = learn.ssc.QuadraticSSC(); %初始化二次函数的参数为Stump得到的结果，所以寻优的结果不会比Stump的结果更差
             wc.A = zeros(K); wc.B = zeros(1,K); wc.B(best.k) = 1; wc.C = -best.t; wc.a = best.a; wc.b = best.b; 
             x0 = [reshape(wc.A,[],1); reshape(wc.B,[],1); wc.C];
             F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
 
-            parameters.epsilon1  = 1e-3;  % 
-            parameters.epsilon2  = 1e-3;  %
-            parameters.max_it = 1e5;     % 最大迭代次数
-            parameters.reset = 100;     % 
-            parameters.dis = 10;     % 
-            x = learn.optimal.minimize_cg(F,x0,parameters);
+            parameters.epsilon = 1e-3; % 
+            parameters.alfa = 1e-4; %
+            parameters.max_it = 1e5; % 最大迭代次数
+            parameters.reset = 1000; % 
+            parameters.dis = 10; % 
+            if best.z > 0
+                x = learn.optimal.maximize_cg(F,x0,parameters);
+            else
+                x = learn.optimal.minimize_cg(F,x0,parameters);
+            end
             wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end);
         end
     end
@@ -182,11 +186,10 @@ classdef DiscreteAdaBoostSSCPro
             
             ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
-            N = 500;
+            N = 400;
             [points,labels] = learn.data.GenerateData.type9(N);
-            plot(points(1,:),points(2,:),'.');hold on;
             
-            M = 1;
+            M = 3;
             ssc = ssc.train(points,labels,M);
         end
     end
