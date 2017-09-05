@@ -9,36 +9,34 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %   parameters.reset 重置条件
 %   parameters.dis 线性搜索的最大距离  
 
-    x1 = x0; y1 = F.object(x0); % 起始点为x0,并计算初始的目标函数值 
-    g1 = F.gradient(x1); % 计算x1处的梯度（此时x1=x0）
+    %ob = learn.tools.Observer('函数值',1,100);
+    %% 计算起始位置的函数值、梯度、梯度模
+    x1 = x0; y1 = F.object(x1); g1 = F.gradient(x1); ng1 = norm(g1); % 起始点为x0,计算函数值、梯度、梯度模 
+    if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
+    
+    %% 迭代寻优
     d1 = -g1; % 初始搜索方向为负梯度方向
-    ng = norm(g1); % 计算梯度模
-    if ng < parameters.epsilon
-        return;
-    end
-    
-    alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon);
-    
     for it = 1:parameters.max_it
-        ng = norm(g1); % 计算梯度模
-        if ng < parameters.epsilon
-            break;
-        end
-        x2 = x1 + alfa * d1; 
-        y2 = F.object(x2);
-        if mod(it,parameters.reset) == 0 || y1 < y2
-            d1 = -g1;
-            alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon);
-            disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f ',y1,it,ng));
+        if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
+        alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon); % 沿d1方向线搜索
+        x2 = x1 + alfa * d1; y2 = F.object(x2); % 迭代到新的位置x2，并计算函数值
+        c1 = mod(it,parameters.reset) == 0; % 到达重置点
+        c2 = y1 < y2; %表明d1方向不是一个下降方向
+        if c1 || c2
+            d1 = -g1; % 设定搜索方向为负梯度方向
+            alfa = learn.optimal.search(F,x1,d1,0,parameters.dis,parameters.alfa*parameters.epsilon); % 沿负梯度方向线搜索
+            x2 = x1 + alfa * d1; y2 = F.object(x2); g2 = F.gradient(x2); d2 = -g2; ng2 = norm(g2); % 迭代到新的位置x2，并计算函数值、梯度、搜索方向、梯度模
+            x1 = x2; d1 = d2; g1 = g2; y1 = y2; ng1 = ng2;
+            disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f ',y1,it,ng1));
+            %ob = ob.showit(y1,'hello');
             continue;
         end
-        
-        disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f ',y1,it,ng));
-        g2 = F.gradient(x2); % 计算x2处的梯度
-        beda = g2'*(g2-g1)/(g1'*g1);
-        d2 = -g2 + beda * d1;
-        alfa = learn.optimal.search(F,x2,d2,0,parameters.dis,parameters.alfa*parameters.epsilon);
-        x1 = x2; d1 = d2; g1 = g2; y1 = y2;
+ 
+        g2 = F.gradient(x2); ng2 = norm(g2); % 计算x2处的梯度和梯度模
+        beda = g2'*(g2-g1)/(g1'*g1); d2 = -g2 + beda * d1; % 计算x2处的搜索方向d2
+        x1 = x2; d1 = d2; g1 = g2; y1 = y2; ng1 = ng2;
+        disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f ',y1,it,ng1));
+        %ob = ob.showit(y1,'hello');
     end
 end
 
