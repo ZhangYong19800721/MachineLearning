@@ -30,7 +30,7 @@ classdef DAB_SSC_Pro_Aid
             for n = 1:N
                 g_h_A(:,n) = reshape(0.5 * obj.points(:,n) * obj.points(:,n)',[],1); % h函数对A的梯度
             end
-            g_h_x = repmat(h .* (h - 1),K*K+K+1,1) .* [g_h_A;g_h_B;g_h_C];
+            g_h_x = repmat(h.*(1-h),K*K+K+1,1) .* [g_h_A;g_h_B;g_h_C];
             g_c_x = 4 * (g_h_x(:,I) .* (g_h_x(:,J) - 0.5)) + 4 * (g_h_x(:,J) .* (g_h_x(:,I) - 0.5));
             g = sum(repmat(obj.weight .* L,K*K+K+1,1) .* g_c_x,2);
         end
