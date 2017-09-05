@@ -26,7 +26,7 @@ classdef DAB_SSC_Pro_Aid
             h = learn.tools.sigmoid(f); % 计算所有点的h函数值
             g_h_C = ones(1,N); % h函数对C的梯度
             g_h_B = obj.points; % h函数对B的梯度
-            g_h_A = zeros(K*K,N);
+            g_h_A = zeros(K*K,N); % h函数对A的梯度
             for n = 1:N
                 g_h_A(:,n) = reshape(0.5 * obj.points(:,n) * obj.points(:,n)',[],1); % h函数对A的梯度
             end
