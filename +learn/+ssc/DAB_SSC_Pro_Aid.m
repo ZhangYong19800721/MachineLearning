@@ -43,7 +43,7 @@ classdef DAB_SSC_Pro_Aid
             
             %% 计算目标函数值
             f = 0.5 * sum((obj.points' * A) .* obj.points',2)' + B * obj.points + repmat(C,1,N); % 计算所有点的f函数值
-            h = +learn.tools.sigmoid(f); % 计算所有点的h函数值
+            h = learn.tools.sigmoid(f); % 计算所有点的h函数值
             c = 4 * (h(I) - 0.5) .* (h(J) - 0.5); % 计算所有点的c函数值
             y = sum(obj.weight .* L .* c,2); % 计算目标函数值
         end
