@@ -21,7 +21,7 @@ classdef DAB_SSC_Pro_Aid
             A = reshape(x(1:(K*K)),K,K); B = reshape(x(K*K+(1:K)),1,[]); C = x(end);
             I = obj.labels(1,:); J = obj.labels(2,:); L = obj.labels(3,:);
             
-            %% 
+            %% 计算梯度
             f = 0.5 * sum((obj.points' * A) .* obj.points',2)' + B * obj.points + repmat(C,1,N); % 计算所有点的f函数值
             h = learn.tools.sigmoid(f); % 计算所有点的h函数值
             g_h_C = ones(1,N); % h函数对C的梯度
