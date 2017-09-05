@@ -72,7 +72,14 @@ classdef DiscreteAdaBoostSSCPro
             parameters.momentum = 0; % 加速动量
             parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
             parameters.max_it = 5e3; % 最大迭代次数
-            [x,y] = learn.optimal.maximize_g(F,x0,parameters);
+            x = learn.optimal.maximize_g(F,x0,parameters);
+            
+%             parameters.epsilon = 1e-3; %当梯度模小于epsilon时停止迭代
+%             parameters.alfa = 1e+3; %线性搜索区间倍数
+%             parameters.beda = 1e-8; %线性搜索的停止条件
+%             parameters.max_it = 2e3; %最大迭代次数
+%             parameters.reset = 200; %重置条件
+%             x = learn.optimal.maximize_cg(F,x0,parameters);
             wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end); wc.a = 2; wc.b = -1; 
         end
     end
