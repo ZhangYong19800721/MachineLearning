@@ -56,7 +56,7 @@ classdef PerceptionL
                 b = reshape(obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m}),obj.num_hidden{m},1);
                 n = w * x + repmat(b,1,size(x,2));
                 if m < M
-                    a{m} = learn.sigmoid(n);
+                    a{m} = learn.tools.sigmoid(n);
                     x = a{m};
                 else
                     a{m} = n;
@@ -121,16 +121,21 @@ classdef PerceptionL
             l = f(x);
             
             configure = [1,6,1];
-            perception = learn.Perception(configure);
+            perception = learn.neural.PerceptionL(configure);
             perception = perception.initialize();
             
             figure(1);
             plot(x,l); hold on;
             plot(x,perception.do(x)); hold off;
             
-            cgbp = learn.ConjugateGradientBP(x,l,perception);
+            cgbp = learn.neural.CGBPL(x,l,perception);
             
-            weight = optimal.ConjugateGradient(cgbp,perception.weight,1e-6,1e-7,1e5,1e3,100);
+            parameters.epsilon = 1e-5;
+            parameters.alfa = 10;
+            parameters.beda = 1e-8;
+            parameters.max_it = 1e5;
+            parameters.reset = 500;
+            weight = learn.optimal.minimize_cg(cgbp,perception.weight,parameters);
             perception.weight = weight;
             
             figure(3);
