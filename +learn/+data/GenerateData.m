@@ -235,5 +235,29 @@ classdef GenerateData
                 end
             end
         end
+        
+        function [points,labels] = type10()
+            % 
+            points = [4.5 0; 0 4.5; -4.5 0; 0 -4.5; 5.5 0; 0 5.5; -5.5 0; 0 -5.5]';
+            [~,N] = size(points);
+            
+            idx = sqrt(sum(points.^2,1)) < 5;
+            plot(points(1, idx),points(2, idx),'+'); hold on;
+            plot(points(1,~idx),points(2,~idx),'.');
+            
+            labels = [];
+            for i = 1:N
+                for j = (i+1):N
+                    norm_pi = norm(points(:,i),2); norm_pj = norm(points(:,j),2);
+                    if norm_pi < 5 && norm_pj < 5
+                        labels = [labels [i,j,+1]'];
+                    elseif 5 <= norm_pi && 5 <= norm_pj
+                        labels = [labels [i,j,+1]'];
+                    else
+                        labels = [labels [i,j,-1]'];
+                    end
+                end
+            end
+        end
     end
 end
