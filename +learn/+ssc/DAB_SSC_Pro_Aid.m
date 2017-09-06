@@ -59,7 +59,6 @@ classdef DAB_SSC_Pro_Aid
             x0 = [2 0 0 2 0 0 -4.8^2]';
             [A,B,C] = learn.tools.X2ABC(x0); 
             f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
-            warning('off','MATLAB:ezplotfeval:NotVectorized');
             ezplot(f,[-10,10,-10,10]);
             drawnow;
             y0 = aid.object(x0);
@@ -69,29 +68,23 @@ classdef DAB_SSC_Pro_Aid
             x1 = x0 + 0.01 * g0;
             [A,B,C] = learn.tools.X2ABC(x1); 
             f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
-            warning('off','MATLAB:ezplotfeval:NotVectorized');
             ezplot(f,[-10,10,-10,10]);
             drawnow;
             y1 = aid.object(x1);
             g1 = aid.gradient(x1);
             
-            %% x2
-            x2 = [2 0 0 2 0 0 -5.0^2]';
-            [A,B,C] = learn.tools.X2ABC(x2); 
+            %% 迭代
+            parameters.learn_rate = 0.1; % 学习速度
+            parameters.momentum = 0.9; % 加速动量
+            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
+            parameters.max_it = 1e4; % 最大迭代次数
+     
+            x = learn.optimal.maximize_g(aid,x0,parameters);
+                  
+            [A,B,C] = learn.tools.X2ABC(x); 
             f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
-            warning('off','MATLAB:ezplotfeval:NotVectorized');
             ezplot(f,[-10,10,-10,10]);
             drawnow;
-            y2 = aid.object(x2);
-            g2 = aid.gradient(x2);
-            
-            %% 迭代
-            parameters.learn_rate = 0.01; % 学习速度
-            parameters.momentum = 0; % 加速动量
-            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 2e3; % 最大迭代次数
-            x = x2;
-            x = learn.optimal.maximize_g(aid,x,parameters);
             error_idx = 0;
         end
         
