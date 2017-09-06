@@ -17,7 +17,7 @@ classdef DAB_SSC_Pro_Aid
         
         function g = gradient(obj,x)
             %% 初始化
-            [K,N] = size(obj.points); Q = K*K+K+1;
+            [K,N] = size(obj.points); Q = K*K+K+1; % K数据的维度、N数据点数、Q二次方程参数个数
             A = reshape(x(1:(K*K)),K,K); B = reshape(x(K*K+(1:K)),1,[]); C = x(end);
             I = obj.labels(1,:); J = obj.labels(2,:); L = obj.labels(3,:);
             
