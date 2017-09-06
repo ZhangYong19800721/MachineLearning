@@ -98,7 +98,8 @@ classdef DiscreteAdaBoostSSCPro
             %% 计算数据点对应的M个比特
             for m = 1:M
                 A = obj.weak{m}.A; B = obj.weak{m}.B; C = obj.weak{m}.C;
-                c(m,:) = (0.5 * sum((points' * A) .* points',2)' + B * points + repmat(C,1,N)) > 0;
+                f = learn.tools.quadratic(A,B,C,points);
+                c(m,:) = f > 0;
             end
         end
 
