@@ -65,7 +65,7 @@ classdef DiscreteAdaBoostSSCPro
             % A = randn(K); B = randn(1,K); C = randn(1);
             % f = 0.5 * sum((points' * A) .* points',2)' + B * points + repmat(C,1,N);
             % C = -median(f);
-            x0 = [reshape(A,[],1); reshape(B,[],1); C];
+            x0 = learn.tools.ABC2X(A,B,C);
             F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
 
             parameters.learn_rate = 0.1; % 学习速度
@@ -80,7 +80,7 @@ classdef DiscreteAdaBoostSSCPro
 %             parameters.max_it = 2e3; %最大迭代次数
 %             parameters.reset = 200; %重置条件
 %             x = learn.optimal.maximize_cg(F,x0,parameters);
-            wc.A = reshape(x(1:(K*K)),K,K); wc.B = reshape(x(K*K+(1:K)),1,[]); wc.C = x(end); wc.a = 2; wc.b = -1; 
+            [wc.A,wc.B,wc.C] = learn.tools.X2ABC(x); wc.a = 2; wc.b = -1; 
         end
     end
     
