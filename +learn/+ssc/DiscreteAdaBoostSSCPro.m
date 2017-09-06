@@ -194,11 +194,26 @@ classdef DiscreteAdaBoostSSCPro
             
             ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
-            N = 400;
-            [points,labels] = learn.data.GenerateData.type8(N);
+            N = 1000;
+            [points,labels] = learn.data.GenerateData.type7(N);
+            plot(points(1,:),points(2,:),'.'); hold on;
             
-            M = 10;
+            M = 30;
             ssc = ssc.train(points,labels,M);
+            save('ssc.mat','ssc');
+            
+            load('ssc.mat');
+            
+            code = ssc.hash(points);
+            query = [0,6]';
+            query_code = ssc.hash(query);
+            z = ones(size(code)); 
+            diff = xor(code,repmat(query_code,1,N)); 
+            z(diff) = -1;
+            dis = ssc.alfa * z;
+            idx = dis <= 0;
+            plot(query(1),query(2),'*r');
+            plot(points(1,idx),points(2,idx),'+');
         end
     end
 end

@@ -172,7 +172,7 @@ classdef GenerateData
                 for j = (i+1):N
                     norm_pi = norm(points(:,i),2); 
                     norm_pj = norm(points(:,j),2); 
-                    if abs(norm_pi - norm_pj) < 3
+                    if abs(norm_pi - norm_pj) < 2
                         labels = [labels [i,j,+1]'];
                     else
                         labels = [labels [i,j,-1]'];
