@@ -24,17 +24,17 @@ classdef DAB_SSC_Pro_Aid
             %% 计算梯度
             f = learn.tools.quadratic(A,B,C,obj.points); % 计算所有点的f函数值
             h = learn.tools.sigmoid(f); % 计算所有点的h函数值
-            g_h_C = ones(1,N); % h函数对C的梯度
-            g_h_B = obj.points; % h函数对B的梯度
-            g_h_A = 0.5 * obj.points(reshape(repmat(1:K,K,1),1,[]),:) .* obj.points(repmat(1:K,1,K),:); % h函数对A的梯度
-            g_h_x = repmat(h.*(1-h),Q,1) .* [g_h_A;g_h_B;g_h_C];
-            g_c_x = 4 * (g_h_x(:,I) .* (g_h_x(:,J) - 0.5)) + 4 * (g_h_x(:,J) .* (g_h_x(:,I) - 0.5));
+            g_f_C = ones(1,N); % f函数对C的梯度
+            g_f_B = obj.points; % f函数对B的梯度
+            g_f_A = 0.5 * obj.points(reshape(repmat(1:K,K,1),1,[]),:) .* obj.points(repmat(1:K,1,K),:); % f函数对A的梯度
+            g_f_x = [g_f_A;g_f_B;g_f_C]; % f函数对x的梯度
+            g_h_x = repmat(h.*(1-h),Q,1) .* g_f_x; % h函数对x的梯度 
+            g_c_x = 4 * (g_h_x(:,I) .* (h(J) - 0.5)) + 4 * (g_h_x(:,J) .* (h(I) - 0.5)); % c函数对x的梯度
             g = sum(repmat(obj.weight.*L,Q,1) .* g_c_x,2);
         end
         
         function y = object(obj,x)
             %% 初始化
-            [K,N] = size(obj.points);
             [A,B,C] = learn.tools.X2ABC(x); % 将x分解为A、B、C三个参数
             I = obj.labels(1,:); J = obj.labels(2,:); L = obj.labels(3,:);
             
@@ -47,22 +47,87 @@ classdef DAB_SSC_Pro_Aid
     end
     
     methods(Static)
-        function error_idx = unit_test()
+        function error_idx = unit_test1()
+            clear all
+            close all
             rng(2);
             [points,labels] = learn.data.GenerateData.type10(); [~,Q] = size(labels);
             weight = ones(1,Q) / Q;
             aid = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
-            x0 = [2 0 0 2 0 0 -25]';
-            %% 画图
+            
+            %% x0
+            x0 = [2 0 0 2 0 0 -4.8^2]';
             [A,B,C] = learn.tools.X2ABC(x0); 
             f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
             warning('off','MATLAB:ezplotfeval:NotVectorized');
-            % ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
             ezplot(f,[-10,10,-10,10]);
             drawnow;
-            %%
             y0 = aid.object(x0);
             g0 = aid.gradient(x0);
+            
+            %% x1
+            x1 = x0 + 0.01 * g0;
+            [A,B,C] = learn.tools.X2ABC(x1); 
+            f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
+            warning('off','MATLAB:ezplotfeval:NotVectorized');
+            ezplot(f,[-10,10,-10,10]);
+            drawnow;
+            y1 = aid.object(x1);
+            g1 = aid.gradient(x1);
+            
+            %% x2
+            x2 = [2 0 0 2 0 0 -5.0^2]';
+            [A,B,C] = learn.tools.X2ABC(x2); 
+            f = @(x,y) 0.5*[x y]*A*[x y]' + B*[x y]' + C;
+            warning('off','MATLAB:ezplotfeval:NotVectorized');
+            ezplot(f,[-10,10,-10,10]);
+            drawnow;
+            y2 = aid.object(x2);
+            g2 = aid.gradient(x2);
+            
+            %% 迭代
+            parameters.learn_rate = 0.01; % 学习速度
+            parameters.momentum = 0; % 加速动量
+            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
+            parameters.max_it = 2e3; % 最大迭代次数
+            x = x2;
+            x = learn.optimal.maximize_g(aid,x,parameters);
+            error_idx = 0;
+        end
+        
+        function error_idx = unit_test2()
+            clear all
+            close all
+            rng(2);
+            points = [1 -1]; labels = [1 2 -1]'; 
+            [~,Q] = size(labels);
+            weight = ones(1,Q) / Q;
+            aid = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
+            
+            %% x0
+            x0 = [1 0 0]';
+            [A,B,C] = learn.tools.X2ABC(x0); 
+            f = @(x) 0.5*x*A*x'+B*x+C;
+            ezplot(f,[-10,10,-10,10]);
+            drawnow;
+            y0 = aid.object(x0);
+            g0 = aid.gradient(x0);
+            
+            %% x1
+            x1 = x0 + 0.01 * g0;
+            [A,B,C] = learn.tools.X2ABC(x1); 
+            f = @(x) 0.5*x*A*x'+B*x+C;
+            ezplot(f,[-10,10,-10,10]);
+            drawnow;
+            y1 = aid.object(x1);
+            g1 = aid.gradient(x1);
+            
+            %% 迭代
+            parameters.learn_rate = 0.01; % 学习速度
+            parameters.momentum = 0; % 加速动量
+            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
+            parameters.max_it = 2e3; % 最大迭代次数
+            x = learn.optimal.maximize_g(aid,x0,parameters);
             error_idx = 0;
         end
     end
