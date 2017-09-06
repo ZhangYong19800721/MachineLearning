@@ -58,28 +58,37 @@ classdef DiscreteAdaBoostSSCPro
             
             %% 初始化
             [K,N] = size(points); % K数据的维度，N数据点数
+            T = zeros(1,K); Z = zeros(1,K);
+            
+            %% 对每一个维度，计算最优的stump参数
+            for k = 1:K
+                [T(k),Z(k)] = obj.select_stump(points(k,:),labels,weight);
+            end
+            [~, best.k] = max(abs(Z)); best.t = T(best.k);
             
             %% 迭代寻优二次函数的参数
-            wc = learn.ssc.QuadraticSSC();
-            A = [2 0; 0 2]; B = [0 0]; C = -25;
-            % A = randn(K); B = randn(1,K); C = randn(1);
-            % f = 0.5 * sum((points' * A) .* points',2)' + B * points + repmat(C,1,N);
-            % C = -median(f);
-            x0 = learn.tools.ABC2X(A,B,C);
             F = learn.ssc.DAB_SSC_Pro_Aid(weight,points,labels);
-
-            parameters.learn_rate = 0.1; % 学习速度
-            parameters.momentum = 0.9; % 加速动量
-            parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 2e3; % 最大迭代次数
-            x = learn.optimal.maximize_g(F,x0,parameters);
+            A = zeros(K); B = zeros(1,K); B(best.k) = 1; C = -best.t;
+            x0 = learn.tools.ABC2X(A,B,C);
+            % x0 = 0.01*randn(7,1);
             
-%             parameters.epsilon = 1e-3; %当梯度模小于epsilon时停止迭代
-%             parameters.alfa = 1e+3; %线性搜索区间倍数
-%             parameters.beda = 1e-8; %线性搜索的停止条件
-%             parameters.max_it = 2e3; %最大迭代次数
-%             parameters.reset = 200; %重置条件
-%             x = learn.optimal.maximize_cg(F,x0,parameters);
+            %% 使用梯度下降迭代 
+%             parameters.learn_rate = 0.1; % 学习速度
+%             parameters.momentum = 0.9; % 加速动量
+%             parameters.epsilon = 1e-3; % 当梯度的范数小于epsilon时迭代结束
+%             parameters.max_it = 1e5; % 最大迭代次数
+%             x = learn.optimal.maximize_g(F,x0,parameters);
+            
+            %% 使用共轭梯度迭代 
+            parameters.epsilon = 1e-3; %当梯度模小于epsilon时停止迭代
+            parameters.alfa = 1e+3; %线性搜索区间倍数
+            parameters.beda = 1e-8; %线性搜索的停止条件
+            parameters.max_it = 1e4; %最大迭代次数
+            parameters.reset = 500; %重置条件
+            [x1,z1] = learn.optimal.maximize_cg(F,x0,parameters);
+            [x2,z2] = learn.optimal.minimize_cg(F,x0,parameters);
+            if abs(z1) > abs(z2), x = x1; else x = x2; end
+            wc = learn.ssc.QuadraticSSC();
             [wc.A,wc.B,wc.C] = learn.tools.X2ABC(x); wc.a = 2; wc.b = -1; 
         end
     end
@@ -186,9 +195,9 @@ classdef DiscreteAdaBoostSSCPro
             ssc = learn.ssc.DiscreteAdaBoostSSCPro();
             
             N = 400;
-            [points,labels] = learn.data.GenerateData.type9(N);
+            [points,labels] = learn.data.GenerateData.type8(N);
             
-            M = 3;
+            M = 10;
             ssc = ssc.train(points,labels,M);
         end
     end
