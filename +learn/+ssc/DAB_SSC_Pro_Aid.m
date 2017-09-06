@@ -29,7 +29,7 @@ classdef DAB_SSC_Pro_Aid
             g_f_A = 0.5 * obj.points(reshape(repmat(1:K,K,1),1,[]),:) .* obj.points(repmat(1:K,1,K),:); % f函数对A的梯度
             g_f_x = [g_f_A;g_f_B;g_f_C]; % f函数对x的梯度
             g_h_x = repmat(h.*(1-h),Q,1) .* g_f_x; % h函数对x的梯度 
-            g_c_x = 4 * (g_h_x(:,I) .* (h(J) - 0.5)) + 4 * (g_h_x(:,J) .* (h(I) - 0.5)); % c函数对x的梯度
+            g_c_x = 4 * (g_h_x(:,I) .* repmat((h(J) - 0.5),Q,1)) + 4 * (g_h_x(:,J) .* repmat((h(I) - 0.5),Q,1)); % c函数对x的梯度
             g = sum(repmat(obj.weight.*L,Q,1) .* g_c_x,2);
         end
         
