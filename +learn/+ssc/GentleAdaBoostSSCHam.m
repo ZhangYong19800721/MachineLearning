@@ -80,6 +80,7 @@ classdef GentleAdaBoostSSCHam
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
+                disp(sprintf('    step_process:%f',k/K));
                 [t(k),a(k),b(k),err(k)] = obj.select_stump(points(k,:),labels,weight,locka);
             end
             
@@ -148,6 +149,7 @@ classdef GentleAdaBoostSSCHam
             
             %% 迭代
             for m = 1:M
+                disp(sprintf('process:%f',m/M));
                 %% 选择最优的弱分类器
                 % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
                 % fm = a * [(x1(k) > t) == (x2(k) > t)] + b

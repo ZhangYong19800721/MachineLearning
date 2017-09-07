@@ -1,10 +1,16 @@
 clear all;
 close all;
 
-import_similarity_labels;
-
 load('nucleotides.mat');
+load('labels_pos.mat');
+load('labels_neg.mat');
+labels = [labels labels_neg];
+clear labels_neg;
 
-K = 1;
-subplot(2,1,1); bar(nucleotide(:,labels(1,K))); subplot(2,1,2); bar(nucleotide(:,labels(2,K)));
+ssc = learn.ssc.GentleAdaBoostSSCHam();
+ssc = ssc.train(nucleotide,labels,0.5,64);
+
+save('ssc.mat','ssc');
+
+
 
