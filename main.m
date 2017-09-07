@@ -8,7 +8,7 @@ labels = [labels labels_neg];
 clear labels_neg;
 
 ssc = learn.ssc.GentleAdaBoostSSCHam();
-ssc = ssc.train(nucleotide,labels,0.5,64);
+ssc = ssc.train(nucleotide,labels,0.95,128);
 
 save('ssc.mat','ssc');
 
