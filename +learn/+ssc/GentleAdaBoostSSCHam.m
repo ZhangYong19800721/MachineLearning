@@ -172,14 +172,14 @@ classdef GentleAdaBoostSSCHam
                 disp(sprintf('´íÎóÂÊ:%f',error));
                 
                 %% »­Í¼
-                if wc.k == 1
-                    x0 = 1; y0 = 0; z0 = -wc.t;
-                else
-                    x0 = 0; y0 = 1; z0 = -wc.t;
-                end
-                f = @(x,y) x0*x+y0*y+z0;
-                ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
-                drawnow;
+%                 if wc.k == 1
+%                     x0 = 1; y0 = 0; z0 = -wc.t;
+%                 else
+%                     x0 = 0; y0 = 1; z0 = -wc.t;
+%                 end
+%                 f = @(x,y) x0*x+y0*y+z0;
+%                 ezplot(f,[min(points(1,:)),max(points(1,:)),min(points(2,:)),max(points(2,:))]);
+%                 drawnow;
             end
         end
     end
