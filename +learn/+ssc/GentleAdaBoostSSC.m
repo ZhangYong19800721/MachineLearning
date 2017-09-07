@@ -137,17 +137,14 @@ classdef GentleAdaBoostSSC
             %% 初始化
             [~,N] = size(points); % 得到数据点数目
             [~,Q] = size(labels); % 得到数据对数目
-            I = labels(1,:);
-            J = labels(2,:);
-            L = labels(3,:);
-            P = [I;J];
+            I = labels(1,:); J = labels(2,:); L = labels(3,:); P = [I;J];
             Fx = zeros(1,Q); % 用来记录函数Fx的值
             weight = ones(1,Q) / Q; % 初始化权值
             
             %% 迭代
             for m = 1:M
                 %% 选择最优的弱分类器
-                % 弱分类器器fm是一个stump函数，由4个参数确定：(a,b,k,t)
+                % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
                 % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
                 wc = obj.select_wc(points,labels,weight);
                 
