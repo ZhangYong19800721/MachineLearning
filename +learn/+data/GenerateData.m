@@ -155,7 +155,7 @@ classdef GenerateData
             labels = [];
             for i = 1:N
                 for j = (i+1):N
-                    if abs(points(2,i) - points(2,j)) < 5
+                    if abs(points(2,i) - points(2,j)) < 1
                         labels = [labels [i,j,+1]'];
                     else
                         labels = [labels [i,j,-1]'];
