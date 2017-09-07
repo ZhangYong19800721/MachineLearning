@@ -60,7 +60,7 @@ classdef GentleAdaBoostSSCHam
         end
         
         %% 选择最优弱分类器
-        function wc = select_wc(obj,points,labels,weight,locka)
+        function wc = select_wc(obj,points,labels,weight,locka,s)
             %select_wc 选择最优的stump弱分类器
             % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
             % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
@@ -80,7 +80,7 @@ classdef GentleAdaBoostSSCHam
             
             %% 对每一个维度，计算最优的stump参数
             for k = 1:K
-                disp(sprintf('    step_process:%f',k/K));
+                disp(sprintf('step:%d, process:%f',s,k/K));
                 [t(k),a(k),b(k),err(k)] = obj.select_stump(points(k,:),labels,weight,locka);
             end
             
@@ -149,11 +149,10 @@ classdef GentleAdaBoostSSCHam
             
             %% 迭代
             for m = 1:M
-                disp(sprintf('process:%f',m/M));
                 %% 选择最优的弱分类器
                 % 弱分类器fm是一个stump函数，由4个参数确定：(a,b,k,t)
                 % fm = a * [(x1(k) > t) == (x2(k) > t)] + b
-                wc = obj.select_wc(points,labels,weight,locka);
+                wc = obj.select_wc(points,labels,weight,locka,m);
                 
                 %% 将最优弱分类器加入到强分类器中
                 obj.weak{1+length(obj.weak)} = wc;
