@@ -80,7 +80,7 @@ classdef DiscreteAdaBoostSSCPro
 %             x = learn.optimal.maximize_g(F,x0,parameters);
             
             %% 使用共轭梯度迭代 
-            parameters.epsilon = 1e-3; %当梯度模小于epsilon时停止迭代
+            parameters.epsilon = 1e-4; %当梯度模小于epsilon时停止迭代
             parameters.alfa = 1e+3; %线性搜索区间倍数
             parameters.beda = 1e-8; %线性搜索的停止条件
             parameters.max_it = 1e4; %最大迭代次数
@@ -199,21 +199,24 @@ classdef DiscreteAdaBoostSSCPro
             plot(points(1,:),points(2,:),'.'); hold on;
             
             M = 30;
-            ssc = ssc.train(points,labels,M);
-            save('ssc.mat','ssc');
+            %ssc = ssc.train(points,labels,M);
+            %save('ssc.mat','ssc');
             
             load('ssc.mat');
             
-            code = ssc.hash(points);
+            M = 1e6;
+            all_points = 20 * rand(2,M) - repmat([10 10]',1,M);
+            code = ssc.hash(all_points);
             query = [0,6]';
             query_code = ssc.hash(query);
             z = ones(size(code)); 
-            diff = xor(code,repmat(query_code,1,N)); 
+            diff = xor(code,repmat(query_code,1,M)); 
             z(diff) = -1;
             dis = ssc.alfa * z;
-            idx = dis <= 0;
-            plot(query(1),query(2),'*r');
-            plot(points(1,idx),points(2,idx),'+');
+            idx = (dis + 0.425) > 0;
+            figure(2);
+            plot(all_points(1,idx),all_points(2,idx),'+'); hold on;
+            plot(query(1),query(2),'*r'); 
         end
     end
 end
