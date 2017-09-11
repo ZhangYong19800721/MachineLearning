@@ -44,7 +44,6 @@ classdef RBM
             % 使用CD1快速算法对权值进行预训练
             
             [D,S,M] = size(minibatchs); % 得到minibatch的个数
-            ob = learn.Observer('重建误差',1,M); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight_v2h));
@@ -62,7 +61,6 @@ classdef RBM
                 recon_error_list(m) = recon_error;
             end
             recon_error_ave_old = mean(recon_error_list);
-            ob = ob.initialize(recon_error_ave_old);
             
             learn_rate_min = min(parameters.learn_rate);
             learn_rate     = max(parameters.learn_rate); %初始化学习速度
@@ -85,11 +83,7 @@ classdef RBM
                     recon_error_ave_old = recon_error_ave_new;
                 end
                 
-                description = strcat('重建误差:',num2str(recon_error_ave_new));
-                description = strcat(description,strcat('迭代次数:',num2str(it)));
-                description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                disp(description);
-                %ob = ob.showit(r_error_ave_new,description);
+                disp(sprintf('重建误差:%f 迭代次数:%d 学习速度:%f',recon_error_ave_new,it,learn_rate));
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 
@@ -106,13 +100,13 @@ classdef RBM
         function h_state = posterior_sample(obj,v_state)
             % posterior_sample 计算后验概率采样
             % 在给定显层神经元取值的情况下，对隐神经元进行抽样
-            h_state = learn.sample(obj.posterior(v_state));
+            h_state = learn.tools.sample(obj.posterior(v_state));
         end
         
         function h_field = posterior(obj,v_state) 
             %POSTERIOR 计算后验概率
             % 在给定显层神经元取值的情况下，计算隐神经元的激活概率
-            h_field = learn.sigmoid(obj.foreward(v_state));
+            h_field = learn.tools.sigmoid(obj.foreward(v_state));
         end
         
         function v_state = likelihood_sample(obj,h_state) 
@@ -124,7 +118,7 @@ classdef RBM
         function v_field = likelihood(obj,h_state) 
             % likelihood 计算似然概率
             % 在给定隐层神经元取值的情况下，计算显神经元的激活概率
-            v_field = learn.sigmoid(obj.backward(h_state));
+            v_field = learn.tools.sigmoid(obj.backward(h_state));
         end
         
         function y = foreward(obj,x)
@@ -164,12 +158,12 @@ classdef RBM
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight_v2h * minibatch + h_bias);
-            h_state_0 = learn.sample(h_field_0);
-            v_field_1 = learn.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
+            h_field_0 = learn.tools.sigmoid(obj.weight_v2h * minibatch + h_bias);
+            h_state_0 = learn.tools.sample(h_field_0);
+            v_field_1 = learn.tools.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
             %v_state_1 = learn.sample(v_field_1); 
             v_state_1 = v_field_1; 
-            h_field_1 = learn.sigmoid(obj.weight_v2h * v_state_1 + h_bias);
+            h_field_1 = learn.tools.sigmoid(obj.weight_v2h * v_state_1 + h_bias);
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             d_weight = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
             d_h_bias = (h_field_0 - h_field_1) * ones(N,1) / N;
