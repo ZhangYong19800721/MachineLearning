@@ -54,7 +54,7 @@ classdef PerceptionS
             for m = 1:M
                 w = reshape(obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m}),obj.num_hidden{m},obj.num_visual{m});
                 b = reshape(obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m}),obj.num_hidden{m},1);
-                a{m} = learn.sigmoid(w * x + repmat(b,1,size(x,2)));
+                a{m} = learn.tools.sigmoid(w * x + repmat(b,1,size(x,2)));
                 x = a{m};
             end
             
