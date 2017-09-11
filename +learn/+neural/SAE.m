@@ -1,10 +1,10 @@
-classdef SAE < learn.StackedRBM
+classdef SAE < learn.neural.StackedRBM
     %STACKED AUTO ENCODER 栈式自动编码器
     %   
     
     methods
         function obj = SAE(configure) % 构造函数
-            obj@learn.StackedRBM(configure); % 调用父类的构造函数
+            obj@learn.neural.StackedRBM(configure); % 调用父类的构造函数
         end
     end
     
@@ -134,7 +134,6 @@ classdef SAE < learn.StackedRBM
             
             %% D数据维度，S批的大小，M批的个数，L层的个数
             [D,S,M] = size(minibatchs); L = obj.layer_num(); 
-            ob = learn.Observer('重建误差',1,M); %初始化观察者用来观察重建误差
                         
             recon_error_list = zeros(1,M);
             for m = 1:M
@@ -144,8 +143,6 @@ classdef SAE < learn.StackedRBM
             end
             
             recon_error_ave_old = mean(recon_error_list); % 计算重建误差的均值
-            ob = ob.initialize(recon_error_ave_old);      % 用均值初始化观察者
-            
             learn_rate_min = min(parameters.learn_rate);
             learn_rate     = max(parameters.learn_rate);  % 将学习速度初始化为最大学习速度
             
@@ -213,49 +210,45 @@ classdef SAE < learn.StackedRBM
                 end
                 
                 %% 画图
-                description = strcat('重建误差：',num2str(recon_error_ave_new));
-                description = strcat(description,strcat('迭代次数:',num2str(it)));
-                description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
-                %disp(description);
-                ob = ob.showit(recon_error_ave_new,description);
+                disp(sprintf('重建误差:%f 迭代次数:%d 学习速度:%f',recon_error_ave_new,it,learn_rate));
             end
         end
     end
     
     methods(Static)
-        function [sae,e] = unit_test()
+        function sae = unit_test()
             clear all;
             close all;
             rng(1);
             
-            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            [data,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
             [D,S,M] = size(data); N = S * M;
             
-            configure = [D,500,256];
-            sae = learn.SAE(configure);
+            configure = [D,500,500,2000,2];
+            sae = learn.neural.SAE(configure);
             
             parameters.learn_rate = [1e-6,1e-2];
             parameters.weight_cost = 1e-4;
-            parameters.max_it = 1e0;
+            parameters.max_it = 1e6;
             sae = sae.pretrain(data,parameters);
-            % save('sae_mnist_pretrain.mat','sae');
-            load('sae_mnist_pretrain.mat');
+            save('sae_mnist_pretrain.mat','sae');
+            % load('sae_mnist_pretrain.mat');
             
             data = reshape(data,D,[]);
-            recon_data1 = sae.rebuild(data,'sample');
-            error1 = sum(sum((recon_data1 - data).^2)) / N
+            recon_data = sae.rebuild(data,'nosample');
+            error = sum(sum((recon_data - data).^2)) / N;
+            disp(sprintf('pretrain-error:%f',error));
             
             data = reshape(data,D,S,M);
             parameters.max_it = 1e6;
-            parameters.case = 1;
+            parameters.case = 2; % 无抽样的情况
             sae = sae.train(data,parameters);
-            
-            save('sae_mnist_finetune2.mat','sae');
+            save('sae_mnist_finetune.mat','sae');
             
             data = reshape(data,D,[]);
-            recon_data2 = sae.rebuild(data,'sample');
-            error2 = sum(sum((recon_data2 - data).^2)) / N
-            e = error2;
+            recon_data = sae.rebuild(data,'nosample');
+            error = sum(sum((recon_data - data).^2)) / N;
+            disp(sprintf('finetune-error:%f',error));
         end
     end
 end
