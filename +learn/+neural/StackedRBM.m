@@ -10,7 +10,7 @@ classdef StackedRBM
             % DeepBeliefNet ¹¹Ôìº¯Êý
             L = length(configure) - 1;
             for l = 1:L
-                obj.rbms{l} = learn.RBM(configure(l),configure(l+1));
+                obj.rbms{l} = learn.neural.RBM(configure(l),configure(l+1));
             end
         end
     end
