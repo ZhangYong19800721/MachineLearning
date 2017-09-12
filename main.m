@@ -48,9 +48,9 @@ disp(sprintf('pretrain-error:%f',error));
 cgbps = learn.neural.CGBPS(data,data,ps);
 clear parameters;
 parameters.epsilon = 1e-3; % 当梯度模小于epsilon时停止迭代
-parameters.alfa = 1e3;     % 线性搜索区间倍数
-parameters.beda = 1e-3;    % 线性搜索的停止条件
-parameters.max_it = 1e2;   % 最大迭代次数
+parameters.alfa = 1e2;     % 线性搜索区间倍数
+parameters.beda = 1e-4;    % 线性搜索的停止条件
+parameters.max_it = 1e4;   % 最大迭代次数
 parameters.reset = 500;    % 重置条件
 weight = learn.optimal.minimize_cg(cgbps,ps.weight,parameters);
 ps.weight = weight;
