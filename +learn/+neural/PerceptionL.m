@@ -109,7 +109,7 @@ classdef PerceptionL
             e = norm(l - y,2);
         end
         
-        function [perception,e] = unit_test2()
+        function p = unit_test2()
             clear all;
             close all;
             rng(1);
@@ -121,29 +121,29 @@ classdef PerceptionL
             l = f(x);
             
             configure = [1,6,1];
-            perception = learn.neural.PerceptionL(configure);
-            perception = perception.initialize();
+            p = learn.neural.PerceptionL(configure);
+            p = p.initialize();
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,perception.do(x)); hold off;
+            plot(x,p.do(x)); hold off;
             
-            cgbp = learn.neural.CGBPL(x,l,perception);
+            cgbp = learn.neural.CGBPL(x,l,p);
             
             parameters.epsilon = 1e-5;
             parameters.alfa = 10;
             parameters.beda = 1e-8;
             parameters.max_it = 1e5;
             parameters.reset = 500;
-            weight = learn.optimal.minimize_cg(cgbp,perception.weight,parameters);
-            perception.weight = weight;
+            weight = learn.optimal.minimize_cg(cgbp,p.weight,parameters);
+            p.weight = weight;
             
             figure(3);
-            y = perception.do(x);
+            y = p.do(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             
-            e = norm(l - y,2);
+            disp(sprintf('error:%f',norm(l - y,2)));
         end
     end
 end
