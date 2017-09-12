@@ -24,14 +24,17 @@ classdef CGBPL
             y = sum(sum((obj.labels - predict).^2));
         end
         
+        %% 梯度计算
         function g = gradient(obj,x)
             %% 初始化
             obj.percep.weight = x; % 初始化权值
             N = size(obj.points,2); % N样本个数
             P = size(obj.percep.weight,1); % P参数个数
             M = length(obj.percep.num_hidden); % M层数
-            g = zeros(P,N); % 梯度
+            g = zeros(P,1); % 梯度
             s = cell(1,M); % 敏感性
+            w = cell(1,M); % 权值
+            b = cell(1,M); % 偏置
             for m = 1:M % 取得每一层的权值和偏置值
                 w{m} = obj.percep.getw(m);
                 b{m} = obj.percep.getb(m);
@@ -40,40 +43,38 @@ classdef CGBPL
             %% 计算梯度
             [~,a] = obj.percep.do(obj.points); % 执行正向计算
             s{M} = -2 * (obj.labels - a{M})'; % 计算顶层的敏感性
-            s{M} = cellfun(@(n) s{M}(n,:),1:N); % 得到元胞数组
             for m = (M-1):-1:1  % 反向传播敏感性
-                s{m} = cellfun(@(n) s{m+1}{n} * w{m+1} * diag(a{m}(:,n).*(1-a{m}(:,n))),1:N);
-                
-                s{m} = s{m+1} * w{m+1} * diag(a{m}.*(1-a{m}));
-                
-                w{m+1};
-                alfa = (a{m}.*(1-a{m}))';
-                s{m} = arrayfun(@(x) weight * diag(), s)
-                s{m} = s{m+1} * repmat(weight,N,1) .* alfa(rep,:);
+                sx = s{m+1}; wx = w{m+1}; ax = a{m}.*(1-a{m});
+                parfor n = 1:N
+                    sm(n,:) = sx(n,:) * wx * diag(ax(:,n));
+                end
+                s{m} = sm;
             end
-            
-            parfor n = 1:N
-                for m = (M-1):-1:1  % 反向传播敏感性
-                    weight = obj.percep.getw(m+1);
-                    s{m} = s{m+1} * weight * diag(a{m}.*(1-a{m}));
-                end
                 
-                for m = 1:M
-                    [~,cw] = obj.percep.getw(m);
-                    [~,cb] = obj.percep.getb(m);
-                    
-                    H = obj.percep.num_hidden{m};
-                    H = obj.percep.num_visual{m};
-                    
-                    if m == 1
-                        f2w = repmat(s{m}',1,H) .* repmat(obj.points(:,n)',H,1);
-                    else
-                        f2w = repmat(s{m}',1,H) .* repmat(a{m-1}',H,1);
+            for m = 1:M
+                [~,cw] = obj.percep.getw(m);
+                [~,cb] = obj.percep.getb(m);
+
+                H = obj.percep.num_hidden{m};
+                V = obj.percep.num_visual{m};
+                
+                sx = s{m}'; 
+                if m == 1
+                    px = obj.points';
+                    gx = [];
+                    parfor n = 1:N
+                        gx = gx + repmat(sx(:,n),1,V) .* repmat(px(n,:),H,1);
                     end
-                    
-                    g(cw,1) = g(cw,1) + reshape(f2w,[],1);
-                    g(cb,1) = g(cb,1) + s{m}';
+                else
+                    ax = a{m-1}';
+                    gx = [];
+                    parfor n = 1:N
+                        gx = gx + repmat(sx(:,n),1,V) .* repmat(ax(n,:),H,1);
+                    end
                 end
+
+                g(cw,1) = g(cw,1) + gx(:);
+                g(cb,1) = g(cb,1) + sum(sx,2);
             end
             
             g = g ./ N;

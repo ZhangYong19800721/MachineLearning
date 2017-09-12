@@ -45,6 +45,7 @@ classdef CGBPL
             s{M} = -2 * (obj.labels - a{M})'; % 计算顶层的敏感性
             for m = (M-1):-1:1  % 反向传播敏感性
                 sx = s{m+1}; wx = w{m+1}; ax = a{m}.*(1-a{m});
+                sm = zeros(N,obj.percep.num_hidden{m});
                 parfor n = 1:N
                     sm(n,:) = sx(n,:) * wx * diag(ax(:,n));
                 end

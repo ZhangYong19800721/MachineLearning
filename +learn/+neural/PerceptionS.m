@@ -78,35 +78,28 @@ classdef PerceptionS
             close all;
             rng(1);
             
-            [mnist,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            [mnist,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
             [D,S,M] = size(mnist); mnist = reshape(mnist,D,[]); N = S*M;
             
             configure = [D,500,256,500,D];
-            ps = learn.PerceptionS(configure);
-            
-            load('sae_mnist_finetune.mat');
-            %load('sae_mnist_pretrain.mat');
-            
-            ps.weight = [reshape(sae.rbms{1}.weight_v2h,[],1);
-                reshape(sae.rbms{1}.hidden_bias,[],1);
-                reshape(sae.rbms{2}.weight_v2h,[],1);
-                reshape(sae.rbms{2}.hidden_bias,[],1);
-                reshape(sae.rbms{2}.weight_h2v',[],1);
-                reshape(sae.rbms{2}.visual_bias,[],1);
-                reshape(sae.rbms{1}.weight_h2v',[],1);
-                reshape(sae.rbms{1}.visual_bias,[],1)];
-           
+            ps = learn.neural.PerceptionS(configure);
+            ps = ps.initialize();
             
             recon_mnist = ps.do(mnist);
-            e1 = sum(sum((recon_mnist - mnist).^2)) / N
+            disp(sprintf('rebuild_error:%f',sum(sum((recon_mnist - mnist).^2)) / N));
             
-            cgbps = learn.CGBPS(mnist,mnist,ps);
+            cgbps = learn.neural.CGBPS(mnist,mnist,ps);
 
-            weight = optimal.minimize_cg(cgbps,ps.weight,1e-6,1e-3,1e6,inf,10);
+            parameters.epsilon = 1e-3;
+            parameters.alfa = 100;
+            parameters.beda = 1e-5;
+            parameters.max_it = 1e5;
+            parameters.reset = 500;
+            weight = learn.optimal.minimize_cg(cgbps,ps.weight,parameters);
             ps.weight = weight;
             
             recon_mnist = ps.do(mnist);
-            e2 = sum(sum((recon_mnist - mnist).^2)) / N
+            disp(sprintf('rebuild_error:%f',sum(sum((recon_mnist - mnist).^2)) / N));
         end
     end
 end
