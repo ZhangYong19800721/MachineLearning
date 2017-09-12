@@ -131,7 +131,7 @@ classdef PerceptionL
             cgbp = learn.neural.CGBPL(x,l,p);
             
             parameters.epsilon = 1e-5;
-            parameters.alfa = 10;
+            parameters.alfa = 1000;
             parameters.beda = 1e-8;
             parameters.max_it = 1e5;
             parameters.reset = 500;
