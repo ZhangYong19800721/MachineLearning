@@ -6,23 +6,23 @@ function [lamda,nf,nx] = armijo(F,x,g,d,parameters)
 %       x 搜索的其实位置
 %       g 目标函数在x处的梯度
 %       d 搜索方向
-%       parameters.beda 值必须在(0,  1)之间
-%       parameters.alfa 值必须在(0,0.5)之间
-%       parameters.maxs 最大搜索步数，正整数
+%       parameters.armijo.beda 值必须在(0,  1)之间
+%       parameters.armijo.alfa 值必须在(0,0.5)之间
+%       parameters.armijo.maxs 最大搜索步数，正整数
 %
 %   输出：
 %       lamda 搜索步长
 
-    assert(0 < parameters.beda && parameters.beda <   1);
-    assert(0 < parameters.alfa && parameters.alfa < 0.5);
-    assert(0 < parameters.maxs);
+    assert(0 < parameters.armijo.beda && parameters.armijo.beda <   1);
+    assert(0 < parameters.armijo.alfa && parameters.armijo.alfa < 0.5);
+    assert(0 < parameters.armijo.maxs);
     
     m = 0; f = F.object(x);
-    while m <= parameters.maxs
-        nx = x + parameters.beda^m * d;
+    while m <= parameters.armijo.maxs
+        nx = x + parameters.armijo.beda^m * d;
         nf = F.object(nx);
-        lamda = parameters.beda^m;
-        if nf <= f + parameters.alfa * lamda * g'* d
+        lamda = parameters.armijo.beda^m;
+        if nf <= f + parameters.armijo.alfa * lamda * g'* d
             break;
         end
         m = m + 1;
