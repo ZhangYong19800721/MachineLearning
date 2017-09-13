@@ -17,7 +17,7 @@ classdef LMBPL
     end
     
     methods
-        function y = myfunc(obj,x)
+        function y = vector(obj,x)
             obj.percep.weight = x;
             predict = obj.percep.do(obj.points);
             y = reshape(obj.labels - predict,[],1);
