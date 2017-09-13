@@ -8,6 +8,7 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %   parameters.reset 重置条件
 %   parameters.option 线搜索方法 
 %       'gold' 黄金分割法（精确搜索）
+%       'parabola' 抛物线搜索法（精确搜索）
 %       'armijo' Armijo准则（非精确搜索）
 %   当采用黄金分割法进行搜索时：
 %       parameters.gold.epsilon 线性搜索的停止条件
@@ -15,6 +16,8 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %       parameters.armijo.beda 值必须在(0,  1)之间，典型值0.5
 %       parameters.armijo.alfa 值必须在(0,0.5)之间，典型值0.2
 %       parameters.armijo.maxs 最大搜索步数，正整数，典型值30
+%   当采用抛物线法进行搜索时：
+%       parameters.parabola.epsilon 线性搜索的停止条件
 
     %ob = learn.tools.Observer('函数值',1,100);
     %% 计算起始位置的函数值、梯度、梯度模
@@ -31,6 +34,10 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
             Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
             [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
             [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+        elseif strcmp(parameters.option,'parabola') % 使用抛物线法进行一维搜索
+            Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
+            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola.epsilon); % 确定搜索区间
+            [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters); x2 = x1 + lamda * d1;
         elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
             [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
         end
@@ -43,6 +50,10 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
                 Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
                 [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
                 [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+            elseif strcmp(parameters.option,'parabola') % 使用抛物线法进行一维搜索
+                Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
+                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola.epsilon); % 确定搜索区间
+                [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters); x2 = x1 + lamda * d1;
             elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
                 [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
             end
