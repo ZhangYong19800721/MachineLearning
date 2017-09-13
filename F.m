@@ -7,7 +7,7 @@ classdef F
     
     methods
         function y = object(obj,x)
-            y = x^2;
+            y = 3 * x.^3 - 4 .* x + 2;
         end
     end
     
