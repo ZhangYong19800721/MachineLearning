@@ -29,7 +29,7 @@ function [x1,z1] = minimize_lm(F,x0,parameters)
         z1 = norm(f1,2).^2;
         z2 = norm(f2,2).^2;
         
-        disp(sprintf('迭代次数:%d 梯度模:%f',it,ng1));
+        disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f',sum(sum(f1.^2)),it,ng1));
         
         if z1 > z2
             alfa = alfa / beda;
