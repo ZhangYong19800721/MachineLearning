@@ -12,9 +12,9 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %   当采用黄金分割法进行搜索时：
 %       parameters.gold.epsilon 线性搜索的停止条件
 %   当采用Armijo进行搜索时：
-%       parameters.armijo.beda 值必须在(0,  1)之间
-%       parameters.armijo.alfa 值必须在(0,0.5)之间
-%       parameters.armijo.maxs 最大搜索步数，正整数
+%       parameters.armijo.beda 值必须在(0,  1)之间，典型值0.5
+%       parameters.armijo.alfa 值必须在(0,0.5)之间，典型值0.2
+%       parameters.armijo.maxs 最大搜索步数，正整数，典型值30
 
     %ob = learn.tools.Observer('函数值',1,100);
     %% 计算起始位置的函数值、梯度、梯度模
@@ -27,23 +27,23 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
         if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
         
         % 沿d1方向线搜索
-        if strcmp(parameters.option,'gold') 
-            [a,b] = learn.optimal.AR(learn.optimal.LINE(F,x1,d1),0,1);
-            parameters.gold.a = a; parameters.gold.b = b;
-            [~,y2,x2] = learn.optimal.gold(F,x1,d1,parameters);
-        elseif strcmp(parameters.option,'armijo')
+        if strcmp(parameters.option,'gold') % 黄金分割法进行一维精确线搜索
+            Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
+            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
+            [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+        elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
             [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
         end
         
         c1 = mod(it,parameters.reset) == 0; % 到达重置点
-        c2 = y1 < y2; %表明d1方向不是一个下降方向
+        c2 = y1 <= y2; %表明d1方向不是一个下降方向
         if c1 || c2
             d1 = -g1; % 设定搜索方向为负梯度方向
-            if strcmp(parameters.option,'gold')
-                [a,b] = learn.optimal.AR(learn.optimal.LINE(F,x1,d1),0,1);
-                parameters.gold.a = a; parameters.gold.b = b;
-                [~,y2,x2] = learn.optimal.gold(F,x1,d1,parameters);
-            elseif strcmp(parameters.option,'armijo')
+            if strcmp(parameters.option,'gold') % 黄金分割法进行一维精确线搜索
+                Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
+                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
+                [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+            elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
                 [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
             end
             g2 = F.gradient(x2); d2 = -g2; ng2 = norm(g2); % 迭代到新的位置x2，并计算函数值、梯度、搜索方向、梯度模
