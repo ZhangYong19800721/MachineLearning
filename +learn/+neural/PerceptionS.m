@@ -73,7 +73,41 @@ classdef PerceptionS
     end
     
     methods(Static)
-        function ps = unit_test()
+        function p = unit_test1()
+            clear all;
+            close all;
+            rng(1);
+            
+            N = 2000;
+            x = linspace(-2,2,N);
+            k = 4;
+            f = @(x)0.5 + 0.4 * sin(k * pi * x / 4);
+            l = f(x);
+            
+            configure = [1,10,1];
+            p = learn.neural.PerceptionS(configure);
+            p = p.initialize();
+            
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,p.do(x)); hold off;
+            
+            lmbp = learn.neural.LMBPS(x,l,p);
+            
+            parameters.epsilon = 1e-3;  % 当梯度的范数小于epsilon时迭代结束
+            parameters.max_it = 1e5; % 最大迭代次数
+            weight = learn.optimal.minimize_lm(lmbp,p.weight,parameters);
+            p.weight = weight;
+            
+            figure(3);
+            y = p.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r.'); hold off;
+            
+            disp(sprintf('error:%f',sum(sum((l - y).^2))));
+        end
+        
+        function ps = unit_test2()
             clear all;
             close all;
             rng(1);
