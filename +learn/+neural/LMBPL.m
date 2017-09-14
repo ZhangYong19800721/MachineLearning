@@ -17,58 +17,57 @@ classdef LMBPL
     end
     
     methods
-        function y = vector(obj,x)
+        function y = object(obj,x)
             obj.percep.weight = x;
             predict = obj.percep.do(obj.points);
-            y = reshape(obj.labels - predict,[],1);
+            y = sum(sum((obj.labels - predict).^2));
         end
         
-        function j = jacobi(obj,x)
-            obj.percep.weight = x;
-            L = size(obj.labels,1); % L标签维度
-            N = size(obj.points,2); % N样本个数
-            P = size(obj.percep.weight,2); % P参数个数
+        function [H,G] = hessian(obj,x)
+            %% 初始化
+            obj.percep.weight = x; % 设置参数
+            [K,~] = size(obj.labels); % K标签维度
+            [~,N] = size(obj.points); % N样本个数
+            P = numel(obj.percep.weight); % P参数个数
             M = length(obj.percep.num_hidden); % M层数
-            j = zeros(L*N,P); % 初始化jacobi矩阵
+            H = zeros(P,P); % Hessian矩阵
+            G = zeros(P,1); % 梯度向量
+            s = cell(1,M); % 敏感性
+            w = cell(1,M); cw = cell(1,M); % 权值
+            b = cell(1,M); cb = cell(1,M); % 偏置
+            for m = 1:M % 取得每一层的权值和偏置值
+                [w{m},cw{m}] = obj.percep.getw(m);
+                [b{m},cb{m}] = obj.percep.getb(m);
+            end
             
+            %% 计算Jacobi矩阵，Hessian矩阵，Gradient梯度
+            [~,a] = obj.percep.do(obj.points); % 执行正向计算
             for n = 1:N
-                [~,a] = obj.percep.do(obj.points(:,n)); % 执行正向计算
-                
-                s = cell(1,M);
-                s{M} = -1 * eye(L); % 计算顶层的敏感性
-                for m = (M-1):-1:1  % 反向传播敏感性
-                    weight = reshape(obj.percep.weight(obj.percep.star_w_idx{m+1}:obj.percep.stop_w_idx{m+1}),...
-                                     obj.percep.num_hidden{m+1},...
-                                     obj.percep.num_visual{m+1});
-                    s{m} = s{m+1} * weight * diag(a{m}.*(1-a{m}));
+                %% 反向传播敏感性
+                s{M} = -eye(K); % 计算顶层的敏感性
+                for m = (M-1):-1:1  % 反向传播
+                    s{m} = s{m+1} * w{m+1} * diag(a{m}(:,n).*(1-a{m}(:,n)));
                 end
                 
-                r = ((n-1)*L+1):((n-1)*L+L);
+                %% 计算Jacobi矩阵
+                J = zeros(K,P);
                 for m = 1:M
-                    cw = obj.percep.star_w_idx{m}:obj.percep.stop_w_idx{m};
-                    cb = obj.percep.star_b_idx{m}:obj.percep.stop_b_idx{m};
-
-                    K = length(a{m}); 
-                    H = obj.percep.num_hidden{m}; 
-                    V = obj.percep.num_visual{m};
-                    n2w = zeros(K,H*V);
-                    for k = 1:K
-                        g = zeros(H,V); 
-                        if m == 1
-                            g(k,:) = obj.points(:,n)';
-                        else
-                            g(k,:) = a{m-1}';
-                        end
-                        n2w(k,:) = reshape(g,1,[]);
+                    if m == 1
+                        Jw = s{m} * kron(eye(obj.percep.num_hidden{m}),obj.points(:,n)'); % 敏感性对权值的导数
+                        Jb = s{m}; 
+                    else
+                        Jw = s{m} * kron(eye(obj.percep.num_hidden{m}),a{m-1}(:,n)'); % 敏感性对权值的导数 
+                        Jb = s{m};
                     end
-                    j(r,cw) = s{m} * n2w;
-                    
-                    n2b = eye(K);
-                    j(r,cb) = s{m} * n2b;
+                    J(:,cw{m}) = Jw;
+                    J(:,cb{m}) = Jb;
                 end
+                
+                %% 计算Hessian矩阵、Gradient梯度
+                H = H + J'*J;
+                G = G + 2*J'*(obj.labels(:,n) - a{M}(:,n));
             end
         end
     end
-    
 end
 
