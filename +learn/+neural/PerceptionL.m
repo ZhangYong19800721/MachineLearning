@@ -138,5 +138,67 @@ classdef PerceptionL
             
             disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
+        
+        function p = unit_test3()
+            clear all;
+            close all;
+            rng(1);
+            
+            N = 2000;
+            x = linspace(-2,2,N);
+            k = 4;
+            f = @(x)sin(k * pi * x / 4);
+            l = f(x);
+            
+            configure = [1,6,1];
+            p = learn.neural.PerceptionL(configure);
+            p = p.initialize();
+            
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,p.do(x)); hold off;
+            
+            cgbp = learn.neural.CGBPL(x,l,p);
+            weight = learn.optimal.minimize_bfgs(cgbp,p.weight);
+            p.weight = weight;
+            
+            figure(3);
+            y = p.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r.'); hold off;
+            
+            disp(sprintf('error:%f',sum(sum((l - y).^2))));
+        end
+        
+        function p = unit_test4()
+            clear all;
+            close all;
+            rng(1);
+            
+            N = 2000;
+            x = linspace(-2,2,N);
+            k = 4;
+            f = @(x)sin(k * pi * x / 4);
+            l = f(x);
+            
+            configure = [1,6,1];
+            p = learn.neural.PerceptionL(configure);
+            p = p.initialize();
+            
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,p.do(x)); hold off;
+            
+            cgbp = learn.neural.CGBPL(x,l,p);
+            weight = learn.optimal.minimize_dfp(cgbp,p.weight);
+            p.weight = weight;
+            
+            figure(3);
+            y = p.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r.'); hold off;
+            
+            disp(sprintf('error:%f',sum(sum((l - y).^2))));
+        end
     end
 end

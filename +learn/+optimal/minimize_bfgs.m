@@ -30,7 +30,7 @@ function [x,y] = minimize_bfgs(F,x0,parameters)
         ng1 = norm(G1); % 计算梯度模
         disp(sprintf('目标函数:%f 迭代次数:%d 梯度模:%f',y1,it,ng1));
         if ng1 < parameters.epsilon, break; end   %当梯度模足够小时终止迭代
-        d = -B \ G1;  % 解方程组 B * D = -G, 计算搜索方向
+        d = -B \ G1;  % 解方程组 B * d = -G, 计算搜索方向
         [y2,x2] = learn.optimal.armijo(F,x1,G1,d,parameters.armijo);
         G2 = F.gradient(x2);  %计算x2处的梯度
         s = x2 - x1;
@@ -41,6 +41,6 @@ function [x,y] = minimize_bfgs(F,x0,parameters)
         x1 = x2; G1 = G2; y1 = y2;
     end
     x = x1;
-    y = F.object(x);
+    y = y1;
 end
 
