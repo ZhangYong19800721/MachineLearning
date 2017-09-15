@@ -19,7 +19,44 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
 %   当采用抛物线法进行搜索时：
 %       parameters.parabola.epsilon 线性搜索的停止条件
 
-    %ob = learn.tools.Observer('函数值',1,100);
+    %% 参数设置
+    if nargin <= 2 % 没有给出参数
+        parameters = [];
+        disp('调用minimize_cg函数时没有给出参数集，将使用默认参数集');
+    end
+    
+    if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
+        parameters.epsilon = 1e-6; 
+        disp(sprintf('调用minimize_cg函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+    end
+    
+    if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
+        parameters.max_it = 1e6;
+        disp(sprintf('调用minimize_cg函数时参数集中没有max_it参数，将使用默认值%f',parameters.max_it));
+    end
+    
+    if ~isfield(parameters,'reset') % 给出参数但是没有给出reset
+        parameters.reset = 500;
+        disp(sprintf('调用minimize_cg函数时参数集中没有reset参数，将使用默认值%f',parameters.reset));
+    end
+    
+    if ~isfield(parameters,'option') % 给出参数但是没有给出option
+        parameters.option = 'gold';
+        disp(sprintf('调用minimize_cg函数时参数集中没有option参数，将使用默认值%s',parameters.option));
+    end
+    
+    if ~isfield(parameters,'gold') % 给出参数但是没有给出gold
+        parameters.gold = [];
+    end
+    
+    if ~isfield(parameters,'parabola') % 给出参数但是没有给出parabola
+        parameters.parabola = [];
+    end
+    
+    if ~isfield(parameters,'armijo') % 给出参数但是没有给出armijo
+        parameters.armijo = [];
+    end
+
     %% 计算起始位置的函数值、梯度、梯度模
     x1 = x0; y1 = F.object(x1); g1 = F.gradient(x1); ng1 = norm(g1); % 起始点为x0,计算函数值、梯度、梯度模 
     if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
@@ -32,14 +69,14 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
         % 沿d1方向线搜索
         if strcmp(parameters.option,'gold') % 黄金分割法进行一维精确线搜索
             Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
-            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
-            [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold); % 确定搜索区间
+            [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters.gold); x2 = x1 + lamda * d1;
         elseif strcmp(parameters.option,'parabola') % 使用抛物线法进行一维搜索
             Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
-            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola.epsilon); % 确定搜索区间
-            [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+            [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola); % 确定搜索区间
+            [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters.parabola); x2 = x1 + lamda * d1;
         elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
-            [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
+            [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters.armijo);
         end
         
         c1 = mod(it,parameters.reset) == 0; % 到达重置点
@@ -48,14 +85,14 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
             d1 = -g1; % 设定搜索方向为负梯度方向
             if strcmp(parameters.option,'gold') % 黄金分割法进行一维精确线搜索
                 Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
-                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold.epsilon); % 确定搜索区间
-                [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.gold); % 确定搜索区间
+                [y2,lamda] = learn.optimal.gold(Fs,a,b,parameters.gold); x2 = x1 + lamda * d1;
             elseif strcmp(parameters.option,'parabola') % 使用抛物线法进行一维搜索
                 Fs = learn.optimal.SINGLEX(F,x1,d1); % 包装为单变量函数
-                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola.epsilon); % 确定搜索区间
-                [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters); x2 = x1 + lamda * d1;
+                [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola); % 确定搜索区间
+                [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters.parabola); x2 = x1 + lamda * d1;
             elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
-                [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters);
+                [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters.armijo);
             end
             g2 = F.gradient(x2); d2 = -g2; ng2 = norm(g2); % 迭代到新的位置x2，并计算函数值、梯度、搜索方向、梯度模
             x1 = x2; d1 = d2; g1 = g2; y1 = y2; ng1 = ng2;
