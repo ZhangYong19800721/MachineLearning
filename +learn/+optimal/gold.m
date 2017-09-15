@@ -12,12 +12,12 @@ function [ny,nx] = gold(F,a,b,parameters)
     %% 参数设置
     if nargin <= 3 % 没有给出参数的情况
         parameters = [];
-        disp('调用gold函数时没有给出参数集，将使用默认参数');
+        % disp('调用gold函数时没有给出参数集，将使用默认参数');
     end
     
     if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon的情况
         parameters.epsilon = 1e-6; 
-        disp(sprintf('调用gold函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+        % disp(sprintf('调用gold函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
     end
   
     %% 使用黄金分割法进行一维搜索
