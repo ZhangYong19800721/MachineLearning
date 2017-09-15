@@ -92,7 +92,7 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
                 [a,b] = learn.optimal.ARR(Fs,0,1,parameters.parabola); % 确定搜索区间
                 [y2,lamda] = learn.optimal.parabola(Fs,a,b,parameters.parabola); x2 = x1 + lamda * d1;
             elseif strcmp(parameters.option,'armijo') % armijo准则进行一维非精确搜索
-                [~,y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters.armijo);
+                [y2,x2] = learn.optimal.armijo(F,x1,g1,d1,parameters.armijo);
             end
             g2 = F.gradient(x2); d2 = -g2; ng2 = norm(g2); % 迭代到新的位置x2，并计算函数值、梯度、搜索方向、梯度模
             x1 = x2; d1 = d2; g1 = g2; y1 = y2; ng1 = ng2;
