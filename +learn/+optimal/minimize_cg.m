@@ -32,7 +32,7 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
     
     if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
         parameters.max_it = 1e6;
-        disp(sprintf('调用minimize_cg函数时参数集中没有max_it参数，将使用默认值%f',parameters.max_it));
+        disp(sprintf('调用minimize_cg函数时参数集中没有max_it参数，将使用默认值%d',parameters.max_it));
     end
     
     if ~isfield(parameters,'reset') % 给出参数但是没有给出reset
