@@ -23,7 +23,7 @@ classdef LMBPS
             y = sum(sum((obj.labels - predict).^2));
         end
         
-        function [H,G] = hessian(obj,x)
+        function [H,G] = hessen(obj,x)
             %% 初始化
             obj.percep.weight = x; % 设置参数
             [K,~] = size(obj.labels); % K标签维度
