@@ -33,7 +33,7 @@ function [x1,z1] = minimize_lm(F,x0,parameters)
     x1 = x0;
     
     for it = 1:parameters.max_it
-        [H1,G1] = F.hessian(x1);
+        [H1,G1] = F.hessen(x1);
         F1 = F.object(x1);
         ng1 = norm(G1);
         if ng1 < parameters.epsilon
