@@ -131,19 +131,7 @@ classdef PerceptionL
             plot(x,p.do(x)); hold off;
             
             cgbp = learn.neural.CGBPL(x,l,p);
-            
-            parameters.epsilon = 1e-5;
-            parameters.max_it = 1e5;
-            parameters.reset = 500;
-            parameters.option = 'gold';
-            % parameters.option = 'armijo';
-            % parameters.option = 'parabola';
-            % parameters.parabola.epsilon = 1e-6;
-            parameters.gold.epsilon = 1e-6;
-            % parameters.armijo.beda = 0.5; % 值必须在(0,  1)之间，典型值0.5
-            % parameters.armijo.alfa = 0.49; % 值必须在(0,0.5)之间，典型值0.2
-            % parameters.armijo.maxs = 30;  % 最大搜索步数，正整数，典型值30
-            weight = learn.optimal.minimize_cg(cgbp,p.weight,parameters);
+            weight = learn.optimal.minimize_cg(cgbp,p.weight);
             p.weight = weight;
             
             figure(3);
