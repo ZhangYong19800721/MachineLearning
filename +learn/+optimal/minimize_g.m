@@ -3,13 +3,36 @@ function [x,y] = minimize_g(F,x0,parameters)
 %   输入：
 %       F 调用F.gradient(x)计算目标函数的梯度，调用F.object(x)计算目标函数的值
 %       x0 迭代的起始位置
-%       parameters.learn_rate 学习速度
-%       parameters.momentum 加速动量
-%       parameters.epsilon 当梯度的范数小于epsilon时迭代结束
-%       parameters.max_it 最大迭代次数
+%       parameters 参数集
 %   输出：
 %       x 最优的参数解
 %       y 最小的函数值
+
+    %% 参数设置
+    if nargin <= 2 % 没有给出参数
+        parameters = [];
+        disp('调用minimize_g函数时没有给出参数集，将使用默认参数集');
+    end
+    
+    if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
+        parameters.epsilon = 1e-3; 
+        disp(sprintf('调用minimize_g函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+    end
+    
+    if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
+        parameters.max_it = 1e6;
+        disp(sprintf('调用minimize_g函数时参数集中没有max_it参数，将使用默认值%f',parameters.max_it));
+    end
+    
+    if ~isfield(parameters,'momentum') % 给出参数但是没有给出momentum
+        parameters.momentum = 0.9;
+        disp(sprintf('调用minimize_g函数时参数集中没有momentum参数，将使用默认值%f',parameters.momentum));
+    end
+    
+    if ~isfield(parameters,'learn_rate') % 给出参数但是没有给出learn_rate
+        parameters.learn_rate = 0.1;
+        disp(sprintf('调用minimize_g函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
+    end
     
     %% 初始化
     %ob = learn.tools.Observer('目标函数值',1,100); % 初始化观察者

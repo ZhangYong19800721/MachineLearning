@@ -27,6 +27,7 @@ function [x1,z1] = minimize_lm(F,x0,parameters)
         disp(sprintf('调用minimize_lm函数时参数集中没有max_it参数，将使用默认值%f',parameters.max_it));
     end
 
+    %%
     alfa = 0.01; beda = 10; 
     D = length(x0); % 数据的维度
     x1 = x0;
