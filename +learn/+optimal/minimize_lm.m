@@ -6,11 +6,26 @@ function [x1,z1] = minimize_lm(F,x0,parameters)
 %         将H和G一起计算出来是因为Jacobi矩阵的计算量大且容量大无法存储
 %         调用F.object(x) 计算目标函数的值
 %       x0 迭代的起始位置
-%       parameters.epsilon 当梯度的范数小于epsilon时迭代结束
-%       parameters.max_it 最大迭代次数
+%       parameters 参数集
 %   输出：
 %       x 最优的参数解
 %       y 最小的函数值
+
+    %% 参数设置
+    if nargin <= 2 % 没有给出参数
+        parameters = [];
+        disp('调用minimize_lm函数时没有给出参数集，将使用默认参数集');
+    end
+    
+    if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
+        parameters.epsilon = 1e-3; 
+        disp(sprintf('调用minimize_lm函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+    end
+    
+    if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
+        parameters.max_it = 1e6;
+        disp(sprintf('调用minimize_lm函数时参数集中没有max_it参数，将使用默认值%f',parameters.max_it));
+    end
 
     alfa = 0.01; beda = 10; 
     D = length(x0); % 数据的维度

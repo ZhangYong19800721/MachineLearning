@@ -97,10 +97,7 @@ classdef PerceptionL
             plot(x,p.do(x)); hold off;
             
             lmbp = learn.neural.LMBPL(x,l,p);
-            
-            parameters.epsilon = 1e-3;  % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 1e5; % 最大迭代次数
-            weight = learn.optimal.minimize_lm(lmbp,p.weight,parameters);
+            weight = learn.optimal.minimize_lm(lmbp,p.weight);
             p.weight = weight;
             
             figure(3);
