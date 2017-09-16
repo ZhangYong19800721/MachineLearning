@@ -3,13 +3,13 @@ close all;
 
 load('images.mat');
 N = 73600;
-points = points(:,1:N);
+points = points(1:(32*32),1:N);
 
-D = 3072; S = 100; M = N/S;
+D = 32*32; S = 100; M = N/S;
 points = reshape(points,D,S,M);
 points = double(points) / 255;
 
-configure = [D,1024,64];
+configure = [D,512,64];
 sae = learn.neural.SAE(configure);
 
 parameters.learn_rate = [1e-6,1e-2];
@@ -25,16 +25,16 @@ rebuild_points = sae.rebuild(points,'nosample');
 error = sum(sum((rebuild_points - points).^2)) / N;
 disp(sprintf('pretrain-error:%f',error));
 
-configure = [D,1024,64,1024,D];
+configure = [D,512,64,512,D];
 ps = learn.neural.PerceptionS(configure);
 ps.weight = [
-    reshape(sae.rbms{1}.weight_v2h,[],1); % Dx1024
-    reshape(sae.rbms{1}.hidden_bias,[],1); % 1024
-    reshape(sae.rbms{2}.weight_v2h,[],1); % 1024x64
+    reshape(sae.rbms{1}.weight_v2h,[],1); % Dx512
+    reshape(sae.rbms{1}.hidden_bias,[],1); % 512
+    reshape(sae.rbms{2}.weight_v2h,[],1); % 512x64
     reshape(sae.rbms{2}.hidden_bias,[],1); % 64
-    reshape(sae.rbms{2}.weight_h2v',[],1); % 64x1024
-    reshape(sae.rbms{2}.visual_bias,[],1); % 1024
-    reshape(sae.rbms{1}.weight_h2v',[],1); % 1024xD
+    reshape(sae.rbms{2}.weight_h2v',[],1); % 64x512
+    reshape(sae.rbms{2}.visual_bias,[],1); % 512
+    reshape(sae.rbms{1}.weight_h2v',[],1); % 512xD
     reshape(sae.rbms{1}.visual_bias,[],1)  % D
     ];
 
