@@ -6,7 +6,7 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
 % points,数据样本点（训练数据）
 % center_points, 经过训练后得到的中心点
 % points_labels, 所有的训练数据加标签后的结果
-    message = 'kmeans++ ...'
+    disp('kmeans++ ...');
 
     [~, N]=size(points);  %D是数据维数，N是样本点个数
 
