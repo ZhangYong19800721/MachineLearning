@@ -1,35 +1,41 @@
 clear all;
 close all;
 
+%% ÔØÈëÊı¾İ
 load('images.mat');
 N = 73600;
 points = points(1:(32*32),1:N);
-
 D = 32*32; S = 100; M = N/S;
 points = reshape(points,D,S,M);
 points = double(points) / 255;
 
+%% ÅäÖÃ×Ô¶¯±àÂëÆ÷
 configure = [D,64];
 sae = learn.neural.SAE(configure);
 
+%% Ô¤ÑµÁ·
 parameters.learn_rate = [1e-6,1e-2];
 parameters.weight_cost = 1e-4;
-parameters.max_it = 1e0;
+parameters.max_it = 1e6;
 parameters.case = 2;
 sae = sae.pretrain(points,parameters);
-% save('sae_pretrain_1024x64.mat','sae');
+save('sae_pretrain_1024x64.mat','sae');
 load('sae_pretrain_1024x64.mat');
-
-
-
-parameters.max_it = 1e6;
-sae = sae.train(points,parameters);
-
 points = reshape(points,D,[]);
 rebuild_points = sae.rebuild(points,'nosample');
-error = sum(sum((rebuild_points - points).^2)) / N;
-disp(sprintf('pretrain-error:%f',error));
+error_pretrained = sum(sum((rebuild_points - points).^2)) / N;
+disp(sprintf('pretrain-error:%f',error_pretrained));
 
+%% ÑµÁ·
+points = reshape(points,D,S,M);
+parameters.max_it = 1e6;
+sae = sae.train(points,parameters);
+points = reshape(points,D,[]);
+rebuild_points = sae.rebuild(points,'nosample');
+error_trained1 = sum(sum((rebuild_points - points).^2)) / N;
+disp(sprintf('train1-error:%f',error_trained1));
+
+%% µ÷ÓÅÑµÁ·
 configure = [D,64,D];
 ps = learn.neural.PerceptionS(configure);
 ps.weight = [
@@ -40,8 +46,8 @@ ps.weight = [
     ];
 
 recon_points = ps.do(points);
-error = sum(sum((recon_points - points).^2)) / N;
-disp(sprintf('pretrain-error:%f',error));
+error_trained2 = sum(sum((recon_points - points).^2)) / N;
+disp(sprintf('train-error2:%f',error_trained2));
 
 cgbps = learn.neural.CGBPS(points,points,ps);
 clear parameters;
@@ -52,5 +58,5 @@ save('perception.mat','ps');
 load('perception.mat');
 
 recon_points = ps.do(points);
-error = sum(sum((recon_points - points).^2)) / N;
-disp(sprintf('finetune-error:%f',error));
+error_finetune = sum(sum((recon_points - points).^2)) / N;
+disp(sprintf('finetune-error:%f',error_finetune));
