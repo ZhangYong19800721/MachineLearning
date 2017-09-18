@@ -19,7 +19,9 @@ parameters.weight_cost = 1e-4;
 parameters.max_it = 1e6;
 parameters.case = 2;
 sae = sae.pretrain(points,parameters);
-save('sae_pretrain_1024x64.mat','sae');
+if parameters.max_it > 1
+    save('sae_pretrain_1024x64.mat','sae');
+end
 load('sae_pretrain_1024x64.mat');
 points = reshape(points,D,[]);
 rebuild_points = sae.rebuild(points,'nosample');
@@ -30,10 +32,13 @@ disp(sprintf('pretrain-error:%f',error_pretrained));
 points = reshape(points,D,S,M);
 parameters.max_it = 1e6;
 sae = sae.train(points,parameters);
+if parameters.max_it > 1
+    save('sae_train_1024x64.mat','sae');
+end
 points = reshape(points,D,[]);
 rebuild_points = sae.rebuild(points,'nosample');
 error_trained1 = sum(sum((rebuild_points - points).^2)) / N;
-disp(sprintf('train1-error:%f',error_trained1));
+disp(sprintf('train-error1:%f',error_trained1));
 
 %% µ÷ÓÅÑµÁ·
 configure = [D,64,D];
