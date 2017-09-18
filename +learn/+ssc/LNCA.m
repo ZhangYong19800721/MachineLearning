@@ -8,7 +8,7 @@ classdef LNCA < learn.neural.PerceptionS
     
     methods
         %% 构造函数
-        function obj = LNCA(o,i) 
+        function obj = LNCA(i,o) 
             obj@learn.neural.PerceptionS([i,o,i]); % 调用父类的构造函数
             obj.t = zeros(o,1); % 初始化判决门限
         end
