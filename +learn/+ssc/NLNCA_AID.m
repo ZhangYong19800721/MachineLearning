@@ -6,6 +6,7 @@ classdef NLNCA_AID
         points; % 数据点
         labels; % 相似标签
         simset; % 相似集合
+        difset; % 不同集合
         rnlnca; % 神经网络
     end
     
@@ -16,14 +17,25 @@ classdef NLNCA_AID
             obj.labels = labels;
             obj.rnlnca = rnlnca;
             
+            labels_pos = labels(:,labels(3,:)==+1);
+            labels_neg = labels(:,labels(3,:)==-1);
+            
             %% 计算相似集合
             [~,N] = size(points);
-            I = labels(1,:); J = labels(2,:);
+            I = labels_pos(1,:); J = labels_pos(2,:);
             parfor n = 1:N
                 index = (J == n | I == n);
                 simset{n} = setdiff(union(I(index),J(index)),n);
             end
             obj.simset = simset;
+            
+            %% 计算不同集合
+            I = labels_neg(1,:); J = labels_neg(2,:);
+            parfor n = 1:N
+                index = (J == n | I == n);
+                difset{n} = setdiff(union(I(index),J(index)),n);
+            end
+            obj.difset = difset;
         end
     end
     
@@ -38,22 +50,24 @@ classdef NLNCA_AID
             code = obj.rnlnca.encode(obj.points); % 计算实数编码
             
             %% 计算目标函数
-            y = 0;
+            y = 0; 
             for a = 1:N
-                D = sum((code - repmat(code(:,a),1,N)).^2,1); % 计算a点到所有其它点的距离
-                E = exp(-D); S = sum(E) - 1; % 计算负指数函数
-                b = obj.simset{a};
-                y = y + sum(E(b) / S);
+                d1 = sum((code(:,obj.simset{a}) - repmat(code(:,a),1,numel(obj.simset{a}))).^2,1);
+                d2 = sum((code(:,obj.difset{a}) - repmat(code(:,a),1,numel(obj.difset{a}))).^2,1);
+                e1 = exp(-d1); se1 = sum(e1);
+                e2 = exp(-d2); se2 = sum(e2);
+                y = y + se1 / (se1 + se2);
             end
+            y = y / N;
         end
         
         %% 计算梯度
         function g = gradient(obj,x)
             %% 初始化
             [~,N] = size(obj.points); % N样本个数
-            W = size(obj.rnlnca.weight,1); % W参数个数
+            P = size(obj.rnlnca.weight,1); % P参数个数
             obj.rnlnca.weight = x; % 首先设置参数
-            g = zeros(W,1); % 初始化梯度
+            g = zeros(P,1); % 初始化梯度
             
             %% 计算实数编码
             code = obj.rnlnca.encode(obj.points); 
