@@ -18,12 +18,12 @@ classdef whiten
             obj.D = 1 / sqrt(N-1) * U * sqrt(K) * V';
         end
         
-        function Y = white(X)
+        function Y = white(obj,X)
             Y = X - repmat(obj.A,1,size(X,2));
             Y = obj.W * Y;
         end
         
-        function X = dewhite(Y)
+        function X = dewhite(obj,Y)
             X = obj.D * Y;
             X = X + repmat(obj.A,1,size(X,2));
         end
