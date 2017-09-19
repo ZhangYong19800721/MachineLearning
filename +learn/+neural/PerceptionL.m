@@ -45,11 +45,14 @@ classdef PerceptionL
             end
         end
         
-        function [y,a] = do(obj,x)
+        function [y,a] = do(obj,x,M)
             % 多层感知器的计算过程
             % y 是最后的输出
             
-            M = length(obj.num_hidden); % 得到层数
+            if nargin <= 2
+                M = length(obj.num_hidden); % 得到层数
+            end
+           
             a = cell(1,M);          
             for m = 1:M
                 w = reshape(obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m}),obj.num_hidden{m},obj.num_visual{m});
