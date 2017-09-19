@@ -40,7 +40,7 @@ classdef GBRBM
             [D,S,M] = size(minibatchs); % 得到minibatch的个数
             ob_window_size = M;     % 设定观察窗口的大小为
             ob_var_num = 1;                     % 设定观察变量的个数
-            ob = learn.Observer('重建误差',ob_var_num,ob_window_size,'xxx'); %初始化观察者，观察重建误差
+            ob = learn.tools.Observer('重建误差',ob_var_num,ob_window_size); %初始化观察者，观察重建误差
             
             % 初始化velocity变量
             v_weight = zeros(size(obj.weight));
@@ -85,7 +85,7 @@ classdef GBRBM
                 description = strcat(description,strcat('迭代次数:',num2str(it)));
                 description = strcat(description,strcat('学习速度:',num2str(learn_rate)));
                 disp(description);
-                %ob = ob.showit(r_error_ave_new,description);
+                ob = ob.showit(r_error_ave_new,description);
                 
                 momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight);
@@ -130,12 +130,12 @@ classdef GBRBM
             v_bias = repmat(obj.visual_bias,1,N);
             v_sgma = repmat(obj.visual_sgma,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
-            h_state_0 = learn.sample(h_field_0);
+            h_field_0 = learn.tools.sigmoid(obj.weight * (minibatch ./ v_sgma) + h_bias);
+            h_state_0 = learn.tools.sample(h_field_0);
             v_field_1 = v_sgma .* (obj.weight'* h_state_0) + v_bias;
             v_state_1 = v_field_1 + v_sgma .* randn(size(v_field_1));
-            h_field_1 = learn.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
-            h_state_1 = learn.sample(h_field_1);
+            h_field_1 = learn.tools.sigmoid(obj.weight * (v_state_1 ./ v_sgma) + h_bias);
+            h_state_1 = learn.tools.sample(h_field_1);
             
             r_error =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
             
@@ -162,36 +162,13 @@ classdef GBRBM
     end
     
     methods(Static)
-         function [gbrbm,e] = unit_test1()
+         function [] = unit_test2()
             clear all;
             close all;
             rng(1);
             
-            data = [1:10; 10:-1:1]'; D = 10; S = 2; M = 500;
-            data = repmat(data,1,1,500); N = S * M;
-            
-            gbrbm = learn.GBRBM(D,60);
-            gbrbm = gbrbm.initialize(data);
-            
-            parameters.learn_rate = [1e-6,1e-2];
-            parameters.learn_sgma = 1e-2;
-            parameters.weight_cost = 1e-4;
-            parameters.max_it = 1e6;
-
-            gbrbm = gbrbm.pretrain(data,parameters);
-            
-            data = reshape(data,D,[]);
-            recon_data = gbrbm.reconstruct(data);
-            e = sum(sum((recon_data - data).^2)) / N;
-         end
-        
-         function [gbrbm,e] = unit_test2()
-            clear all;
-            close all;
-            rng(1);
-            
-            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(data); data = data * 255; data = reshape(data,D,[]);
+            [data,~,~,~] = learn.import_mnist('./+learn/data/mnist.mat');
+            [D,S,M] = size(data); data = reshape(data,D,[]);
      
             data = reshape(data,D,S,M);
             
@@ -217,26 +194,26 @@ classdef GBRBM
             close all;
             rng(1);
             
-            [mnist,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
-            [D,S,M] = size(mnist); mnist = mnist * 255; mnist = reshape(mnist,D,[]);
+            [mnist,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
+            [D,S,M] = size(mnist); mnist = reshape(mnist,D,[]);
             
-            [W,R,A] = learn.whiten(mnist);
-            data = W * (mnist - repmat(A,1,size(mnist,2)));
-            data = 10 * data;
+            whiten = learn.tools.whiten();
+            whiten = whiten.pca(mnist);
+            data = whiten.white(mnist);
             
             ave_data = mean(data,2);
             std_data = std(data,0,2);
             
             data = reshape(data,D,S,M);
             
-            gbrbm = learn.GBRBM(D,500);
+            gbrbm = learn.neural.GBRBM(D,500);
             gbrbm = gbrbm.initialize(data);
             
             parameters.learn_rate = [1e-8,1e-4];
             parameters.learn_sgma = 1e-2;
             parameters.weight_cost = 1e-4;
             parameters.max_it = 1e6;
-            
+
             gbrbm = gbrbm.pretrain(data,parameters);
             save('gbrbm.mat','gbrbm');
          
