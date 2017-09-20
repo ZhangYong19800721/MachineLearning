@@ -8,6 +8,7 @@ classdef GBRBM
         weight;      % 权值矩阵(num_hidden * num_visual)
         hidden_bias; % 隐藏神经元的偏置
         visual_bias; % 可见神经元的偏置
+        visual_sgma; % 可见神经元加性高斯噪声标准差
     end
     
     methods
@@ -17,6 +18,7 @@ classdef GBRBM
             obj.weight = zeros(obj.num_hidden,obj.num_visual);
             obj.hidden_bias = zeros(obj.num_hidden,1);
             obj.visual_bias = zeros(obj.num_visual,1);
+            obj.visual_sgma = ones(obj.num_visual,1);
         end
     end
     
@@ -160,7 +162,34 @@ classdef GBRBM
     end
     
     methods(Static)
-         function [] = unit_test()
+         function [] = unit_test2()
+            clear all;
+            close all;
+            rng(1);
+            
+            [data,~,~,~] = learn.import_mnist('./+learn/data/mnist.mat');
+            [D,S,M] = size(data); data = reshape(data,D,[]);
+     
+            data = reshape(data,D,S,M);
+            
+            gbrbm = learn.GBRBM(D,500);
+            gbrbm = gbrbm.initialize(data);
+            
+            parameters.learn_rate = [1e-8,1e-4];
+            parameters.learn_sgma = 1e-2;
+            parameters.weight_cost = 1e-4;
+            parameters.max_it = 1e6;
+            
+            gbrbm = gbrbm.pretrain(data,parameters);
+            
+            save('gbrbm.mat','gbrbm');
+         
+            data = reshape(data,D,[]);
+            recon_data = gbrbm.reconstruct(data);
+            e = sum(sum((recon_data - data).^2)) / (S*M);
+         end
+        
+         function [gbrbm,e] = unit_test3()
             clear all;
             close all;
             rng(1);

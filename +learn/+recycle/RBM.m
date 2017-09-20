@@ -23,52 +23,6 @@ classdef RBM
     end
     
     methods
-        %% 计算梯度
-        function g = gradient(obj,x)
-            %% 嵌入参数
-            H = obj.num_hidden; V = obj.num_visual; W = H*V;
-            obj.weight_v2h(:) = x(1:W);
-            obj.hidden_bias(:) = x(W+1:H);
-            obj.visual_bias(:) = x(W+H+1:V);
-            
-            %%
-            minibatch = points(:,:,i);
-            N = size(minibatch,2); % 训练样本的个数
-            h_bias = repmat(obj.hidden_bias,1,N);
-            v_bias = repmat(obj.visual_bias,1,N);
-            
-            %%
-            h_field_0 = learn.tools.sigmoid(obj.weight_v2h * minibatch + h_bias);
-            h_state_0 = learn.tools.sample(h_field_0);
-            v_field_1 = learn.tools.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
-            v_state_1 = v_field_1; 
-            h_field_1 = learn.tools.sigmoid(obj.weight_v2h * v_state_1 + h_bias);
-            gw = (h_field_0 * minibatch' - h_field_1 * v_state_1') / N;
-            gh = (h_field_0 - h_field_1) * ones(N,1) / N;
-            gv = (minibatch - v_state_1) * ones(N,1) / N;
-            g = [gw(:);gh(:);gv(:)];
-        end
-        
-        %% 计算重建误差
-        function y = object(obj,x)
-            %% 嵌入参数
-            H = obj.num_hidden; V = obj.num_visual; W = H*V;
-            obj.weight_v2h(:) = x(1:W);
-            obj.hidden_bias(:) = x(W+1:H);
-            obj.visual_bias(:) = x(W+H+1:V);
-            
-            %%
-            N = size(minibatch,2); % 训练样本的个数
-            h_bias = repmat(obj.hidden_bias,1,N);
-            v_bias = repmat(obj.visual_bias,1,N);
-            
-            %% 计算重建误差
-            h_field_0 = learn.tools.sigmoid(obj.weight_v2h * minibatch + h_bias);
-            h_state_0 = learn.tools.sample(h_field_0);
-            v_field_1 = learn.tools.sigmoid(obj.weight_v2h'* h_state_0 + v_bias);
-            y =  sum(sum((v_field_1 - minibatch).^2)) / N; %计算在整个minibatch上的平均重建误差
-        end
-        
         function obj = construct(obj,weight_v2h,weight_h2v,visual_bias,hidden_bias)
             %construct 使用权值、隐神经元偏置、显神经元偏置直接构建RBM
             [obj.num_hidden, obj.num_visual] = size(weight_v2h);
