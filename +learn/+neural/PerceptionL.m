@@ -10,6 +10,8 @@ classdef PerceptionL
         stop_w_idx;  % stop_w_idx{m}表示第m层的权值的结束位置
         star_b_idx;  % star_b_idx{m}表示第m层的偏置的起始位置
         stop_b_idx;  % stop_b_idx{m}表示第m层的偏置的结束位置
+        points; % 训练数据
+        labels; % 训练标签
     end
     
     methods % 构造函数
@@ -35,6 +37,81 @@ classdef PerceptionL
     end
     
     methods
+        %% 计算梯度
+        function g = gradient(obj,x,i)
+            %% 初始化
+            obj.weight = x; % 初始化权值
+            [D,S,M] = size(obj.points);
+            i = 1 + mod(i,M);
+            minibatch = obj.points(:,:,i); % 取一个minibatch
+            minilabel = obj.labels(:,:,i); % 取一个minibatch
+            N = size(minibatch,2); % N样本个数
+            P = size(obj.weight,1); % P参数个数
+            M = length(obj.num_hidden); % M层数
+            g = zeros(P,1); % 梯度
+            s = cell(1,M); % 敏感性
+            w = cell(1,M); % 权值
+            b = cell(1,M); % 偏置
+            for m = 1:M % 取得每一层的权值和偏置值
+                w{m} = obj.getw(m);
+                b{m} = obj.getb(m);
+            end
+            
+            %% 计算梯度
+            [~,a] = obj.do(minibatch); % 执行正向计算
+            s{M} = -2 * (minilabel - a{M})'; % 计算顶层的敏感性
+            for m = (M-1):-1:1  % 反向传播敏感性
+                sx = s{m+1}; wx = w{m+1}; ax = a{m}.*(1-a{m});
+                sm = zeros(N,obj.num_hidden{m});
+                parfor n = 1:N
+                    sm(n,:) = sx(n,:) * wx * diag(ax(:,n));
+                end
+                s{m} = sm;
+            end
+                
+            for m = 1:M
+                [~,cw] = obj.getw(m);
+                [~,cb] = obj.getb(m);
+
+                H = obj.num_hidden{m};
+                V = obj.num_visual{m};
+                
+                sx = s{m}'; 
+                if m == 1
+                    px = minibatch';
+                    gx = zeros(size(w{m}));
+                    parfor n = 1:N
+                        gx = gx + repmat(sx(:,n),1,V) .* repmat(px(n,:),H,1);
+                    end
+                else
+                    ax = a{m-1}';
+                    gx = zeros(size(w{m}));
+                    parfor n = 1:N
+                        gx = gx + repmat(sx(:,n),1,V) .* repmat(ax(n,:),H,1);
+                    end
+                end
+
+                g(cw,1) = g(cw,1) + gx(:);
+                g(cb,1) = g(cb,1) + sum(sx,2);
+            end
+            
+            g = g ./ N;
+        end
+        
+        %% 计算函数值
+        function y = object(obj,x,i)
+           %% 初始化
+            obj.weight = x; % 初始化权值
+            [D,S,M] = size(obj.points);
+            i = 1 + mod(i,M);
+            minibatch = obj.points(:,:,i); % 取一个minibatch
+            minilabel = obj.labels(:,:,i); % 取一个minibatch
+            
+           %% 计算目标函数
+            z = obj.do(minibatch);
+            y = sum(sum((minilabel - z).^2));
+        end
+        
         function obj = initialize(obj)
             M = length(obj.num_hidden); % 得到层数
             for m = 1:M
@@ -173,7 +250,7 @@ classdef PerceptionL
             disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
         
-        function p = unit_test4()
+        function [] = unit_test4()
             clear all;
             close all;
             rng(1);
@@ -192,8 +269,10 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            cgbp = learn.neural.CGBPL(x,l,p);
-            weight = learn.optimal.minimize_dfp(cgbp,p.weight);
+            
+            p.points = reshape(x,1,20,100);
+            p.labels = reshape(l,1,20,100);
+            weight = learn.optimal.minimize_adam(p,p.weight);
             p.weight = weight;
             
             figure(3);
