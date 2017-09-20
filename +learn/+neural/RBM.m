@@ -157,10 +157,10 @@ classdef RBM
     end
     
     methods (Access = private)
-        function obj = initialize_weight(obj,train_data)
+        function obj = initialize_weight(obj,points)
             %INTIALIZE 初始化权值矩阵为0附近的小随机数，初始化显层神经元的偏置为先验概率，初始化隐层神经元的偏置为0.
             obj.weight_v2h = 0.01 * randn(size(obj.weight_v2h));
-            obj.visual_bias = mean(train_data,2);
+            obj.visual_bias = mean(points,2);
             obj.visual_bias = log(obj.visual_bias./(1-obj.visual_bias));
             obj.visual_bias(obj.visual_bias < -100) = -100;
             obj.visual_bias(obj.visual_bias > +100) = +100;
