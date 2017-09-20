@@ -2,19 +2,36 @@ clear all
 close all
 rng(1)
 
-D = 32*32*3;  % 数据维度
-S = 1000;  % minibatch的大小
-M = 2000;  % minibatch的个数
-N = S*M;   % 图片总数
-points = zeros(D,S,M,'uint8');
+load('tiny_images.mat')
+data = double(points); data = data / 255;
+[D,S,M] = size(data); N = S * M;
 
-for m = 1:M
-    disp(sprintf('minibatch_id = %d',m));
-    images = learn.data.loadTinyImages((m-1)*S+[1:S],'D:\迅雷下载\tiny_images.bin'); % 每次载入S幅图像
-    for i = 1:S
-        yuv = rgb2ycbcr(images(:,:,:,i));
-        points(:,i,m) = yuv(:);
-    end
-end
+configure = [D,1024,1024,64];
+sae = learn.neural.SAE(configure);
 
-save('tiny_images.mat','points','-v7.3');
+parameters.learn_rate = 1e-1;
+parameters.max_it = M*100;
+parameters.decay = 99;
+sae = sae.pretrain(data,parameters);
+save('sae_pretrained.mat','sae');
+% load('sae_mnist_pretrain.mat');
+
+data = reshape(data,D,[]);
+recon_data = sae.rebuild(data,'nosample');
+error = sum(sum((recon_data - data).^2)) / N;
+disp(sprintf('pretrained-error:%f',error));
+
+data = reshape(data,D,S,M);
+clear parameters;
+parameters.learn_rate_max = 1e-1;
+parameters.learn_rate_min = 1e-6;
+parameters.momentum = 0.9;
+parameters.max_it = M*100;
+parameters.case = 2; % 无抽样的情况
+sae = sae.train(data,parameters);
+save('sae_trained.mat','sae');
+
+data = reshape(data,D,[]);
+recon_data = sae.rebuild(data,'nosample');
+error = sum(sum((recon_data - data).^2)) / N;
+disp(sprintf('trained-error:%f',error));
