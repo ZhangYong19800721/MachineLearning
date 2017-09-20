@@ -1,5 +1,6 @@
 clear all;
 close all;
+rng(3);
 
 %% 载入数据
 load('images.mat'); 
@@ -62,7 +63,7 @@ points = double(points) / 255; % 重新载入points
 lnca_aid = learn.ssc.LNCA_AID(points,labels,lnca);
 clear parameters;
 parameters.epsilon = 1e-3; % 当梯度模小于epsilon时停止迭代
-weight = learn.optimal.maximize_g(lnca_aid,lnca.weight,parameters);
+parameters.max_it = 1e3;
+weight = learn.optimal.maximize_cg(lnca_aid,lnca.weight,parameters);
 lnca.weight = weight;
 save('lnca.mat','lnca');
-load('lnca.mat');
