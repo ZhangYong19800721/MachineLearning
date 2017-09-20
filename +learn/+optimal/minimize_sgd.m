@@ -11,32 +11,32 @@ function [x,y] = minimize_sgd(F,x0,parameters)
     %% 参数设置
     if nargin <= 2 % 没有给出参数
         parameters = [];
-        disp('调用minimize_g函数时没有给出参数集，将使用默认参数集');
+        disp('调用minimize_sgd函数时没有给出参数集，将使用默认参数集');
     end
     
     if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
         parameters.epsilon = 1e-3; 
-        disp(sprintf('调用minimize_g函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+        disp(sprintf('调用minimize_sgd函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
     end
     
     if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
         parameters.max_it = 1e6;
-        disp(sprintf('调用minimize_g函数时参数集中没有max_it参数，将使用默认值%d',parameters.max_it));
+        disp(sprintf('调用minimize_sgd函数时参数集中没有max_it参数，将使用默认值%d',parameters.max_it));
     end
     
     if ~isfield(parameters,'momentum') % 给出参数但是没有给出momentum
         parameters.momentum = 0.9;
-        disp(sprintf('调用minimize_g函数时参数集中没有momentum参数，将使用默认值%f',parameters.momentum));
+        disp(sprintf('调用minimize_sgd函数时参数集中没有momentum参数，将使用默认值%f',parameters.momentum));
     end
     
     if ~isfield(parameters,'learn_rate') % 给出参数但是没有给出learn_rate
         parameters.learn_rate = 0.1;
-        disp(sprintf('调用minimize_g函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
+        disp(sprintf('调用minimize_sgd函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
     end
     
     if ~isfield(parameters,'decay') % 给出参数但是没有给出decay
-        parameters.decay = 4 / parameters.max_it; % 学习速度最终降低至初始值的20%
-        disp(sprintf('调用minimize_g函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
+        parameters.decay = 0; % 缺省情况下不降低学习速度
+        disp(sprintf('调用minimize_sgd函数时参数集中没有decay参数，将使用默认值%f',parameters.decay));
     end
     
     %% 初始化
@@ -46,7 +46,7 @@ function [x,y] = minimize_sgd(F,x0,parameters)
     
     %% 开始迭代
     for it = 0:parameters.max_it
-        r  = parameters.learn_rate / (1 + parameters.decay*it);
+        r  = parameters.learn_rate / (1 + parameters.decay * it / parameters.max_it);
         g1 = F.gradient(x1,it); % 计算梯度
         y1 = F.object(x1,it); % 计算目标函数值
         ng1 = norm(g1); % 计算梯度模
