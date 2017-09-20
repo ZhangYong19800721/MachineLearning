@@ -101,14 +101,14 @@ classdef GBRBM
             end
         end
         
-        function y = reconstruct(obj,x)
+        function y = rebuild(obj,x)
             N = size(x,2); % 样本的个数
             h_bias = repmat(obj.hidden_bias,1,N);
             v_bias = repmat(obj.visual_bias,1,N);
             v_sgma = repmat(obj.visual_sgma,1,N);
             
-            h_field_0 = learn.sigmoid(obj.weight * (x ./ v_sgma) + h_bias);
-            h_state_0 = learn.sample(h_field_0);
+            h_field_0 = learn.tools.sigmoid(obj.weight * (x ./ v_sgma) + h_bias);
+            h_state_0 = learn.tools.sample(h_field_0);
             y = v_sgma .* (obj.weight'* h_state_0) + v_bias;
         end
         
@@ -162,67 +162,37 @@ classdef GBRBM
     end
     
     methods(Static)
-         function [] = unit_test2()
-            clear all;
-            close all;
-            rng(1);
-            
-            [data,~,~,~] = learn.import_mnist('./+learn/data/mnist.mat');
-            [D,S,M] = size(data); data = reshape(data,D,[]);
-     
-            data = reshape(data,D,S,M);
-            
-            gbrbm = learn.GBRBM(D,500);
-            gbrbm = gbrbm.initialize(data);
-            
-            parameters.learn_rate = [1e-8,1e-4];
-            parameters.learn_sgma = 1e-2;
-            parameters.weight_cost = 1e-4;
-            parameters.max_it = 1e6;
-            
-            gbrbm = gbrbm.pretrain(data,parameters);
-            
-            save('gbrbm.mat','gbrbm');
-         
-            data = reshape(data,D,[]);
-            recon_data = gbrbm.reconstruct(data);
-            e = sum(sum((recon_data - data).^2)) / (S*M);
+         function [] = unit_test()
+             clear all;
+             close all;
+             rng(1);
+             
+             [mnist,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
+             [D,S,M] = size(mnist); mnist = reshape(mnist,D,[]);
+             
+             whiten = learn.tools.whiten();
+             whiten = whiten.pca(mnist);
+             data = whiten.white(mnist);
+             
+             ave_data = mean(data,2);
+             std_data = std(data,0,2);
+             
+             data = reshape(data,D,S,M);
+             gbrbm = learn.recycle.GBRBM(D,500);
+             gbrbm = gbrbm.initialize(data);
+             
+             parameters.learn_rate = 1e-3;
+             parameters.max_it = M*40;
+             parameters.weight_cost = 1e-4;
+             parameters.learn_sgma = 1e-2;
+             gbrbm = gbrbm.pretrain(data,parameters);
+             
+             data = reshape(data,D,[]);
+             rebuild_data = gbrbm.rebuild(data);
+             rebuild_mnist = whiten.dewhite(rebuild_data);
+             e = sum(sum((rebuild_mnist - mnist).^2)) / (S*M);
+             disp(sprintf('重建误差:%f',e));
          end
-        
-         function [gbrbm,e] = unit_test3()
-            clear all;
-            close all;
-            rng(1);
-            
-            [mnist,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
-            [D,S,M] = size(mnist); mnist = reshape(mnist,D,[]);
-            
-            whiten = learn.tools.whiten();
-            whiten = whiten.pca(mnist);
-            data = whiten.white(mnist);
-            
-            ave_data = mean(data,2);
-            std_data = std(data,0,2);
-            
-            data = reshape(data,D,S,M);
-            
-            gbrbm = learn.neural.GBRBM(D,500);
-            gbrbm = gbrbm.initialize(data);
-            
-            parameters.learn_rate = [1e-8,1e-4];
-            parameters.learn_sgma = 1e-2;
-            parameters.weight_cost = 1e-4;
-            parameters.max_it = 1e6;
-
-            gbrbm = gbrbm.pretrain(data,parameters);
-            save('gbrbm.mat','gbrbm');
-         
-            data = reshape(data,D,[]);
-            recon_data = gbrbm.reconstruct(data);
-            recon_data = recon_data / 10;
-            recon_mnist = R * recon_data + repmat(A,1,size(recon_data,2));
-            e = sum(sum((recon_mnist - mnist).^2)) / (S*M);
-        end
     end
     
 end
