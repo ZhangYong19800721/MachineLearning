@@ -143,18 +143,14 @@ classdef SAE < learn.neural.StackedRBM
             end
             
             recon_error_ave_old = mean(recon_error_list); % 计算重建误差的均值
-            learn_rate_min = min(parameters.learn_rate);
-            learn_rate     = max(parameters.learn_rate);  % 将学习速度初始化为最大学习速度
+            learn_rate_min = parameters.learn_rate_min;
+            learn_rate     = parameters.learn_rate_max;   % 将学习速度初始化为最大学习速度
             
-            %% 初始化动量参数
-            % 初始化动量倍率为0.5
-            momentum = 0.5;
-            
-            % 初始化动量值
+            %% 初始化动量值
             inc = cell(1,L);
             for l = 1:L
-                inc{l}.weight_v2h = zeros(size(obj.rbms{l}.weight_v2h));
-                inc{l}.weight_h2v = zeros(size(obj.rbms{l}.weight_h2v));
+                inc{l}.weight_v2h  = zeros(size(obj.rbms{l}.weight_v2h));
+                inc{l}.weight_h2v  = zeros(size(obj.rbms{l}.weight_h2v));
                 inc{l}.visual_bias = zeros(size(obj.rbms{l}.visual_bias));
                 inc{l}.hidden_bias = zeros(size(obj.rbms{l}.hidden_bias));
             end
@@ -172,24 +168,23 @@ classdef SAE < learn.neural.StackedRBM
                     pre_neg_proba{l+1} = obj.rbms{l}.posterior (neg_proba{l  });
                 end
                 
-                momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
                 
                 for l = 1:L
-                    inc{l}.weight_h2v = momentum * inc{l}.weight_h2v + learn_rate * pos_proba{l+1} * (pos_proba{l} - pre_pos_proba{l})' / S;
-                    inc{l}.visual_bias = momentum * inc{l}.visual_bias + learn_rate * sum(pos_proba{l} - pre_pos_proba{l},2) / S;
-                    inc{l}.weight_v2h = momentum * inc{l}.weight_v2h + learn_rate * (neg_proba{l+1} - pre_neg_proba{l+1}) * neg_proba{l}' / S;
-                    inc{l}.hidden_bias = momentum * inc{l}.hidden_bias + learn_rate * sum(neg_proba{l+1} - pre_neg_proba{l+1},2) / S;
+                    inc{l}.weight_h2v  = parameters.momentum * inc{l}.weight_h2v  + (1 - parameters.momentum) * learn_rate * pos_proba{l+1} * (pos_proba{l} - pre_pos_proba{l})' / S;
+                    inc{l}.visual_bias = parameters.momentum * inc{l}.visual_bias + (1 - parameters.momentum) * learn_rate * sum(pos_proba{l} - pre_pos_proba{l},2) / S;
+                    inc{l}.weight_v2h  = parameters.momentum * inc{l}.weight_v2h  + (1 - parameters.momentum) * learn_rate * (neg_proba{l+1} - pre_neg_proba{l+1}) * neg_proba{l}' / S;
+                    inc{l}.hidden_bias = parameters.momentum * inc{l}.hidden_bias + (1 - parameters.momentum) * learn_rate * sum(neg_proba{l+1} - pre_neg_proba{l+1},2) / S;
                 end
                 
                 %% 更新产生权值
                 for l = 1:L
-                    obj.rbms{l}.weight_h2v = obj.rbms{l}.weight_h2v + inc{l}.weight_h2v;
+                    obj.rbms{l}.weight_h2v  = obj.rbms{l}.weight_h2v  + inc{l}.weight_h2v;
                     obj.rbms{l}.visual_bias = obj.rbms{l}.visual_bias + inc{l}.visual_bias;
                 end
                 
                 %% 更新识别权值
                 for l = 1:L
-                    obj.rbms{l}.weight_v2h = obj.rbms{l}.weight_v2h + inc{l}.weight_v2h;
+                    obj.rbms{l}.weight_v2h  = obj.rbms{l}.weight_v2h  + inc{l}.weight_v2h;
                     obj.rbms{l}.hidden_bias = obj.rbms{l}.hidden_bias + inc{l}.hidden_bias;
                 end
                 
@@ -201,8 +196,8 @@ classdef SAE < learn.neural.StackedRBM
                 
                 if m == M
                     if recon_error_ave_new > recon_error_ave_old % 当经过M次迭代的平均重建误差不下降时
-                        learn_rate = learn_rate / 2;         % 就缩减学习速度
-                        if learn_rate < learn_rate_min       % 当学习速度小于最小学习速度时，退出
+                        learn_rate = learn_rate / 10;            % 就缩减学习速度
+                        if learn_rate < learn_rate_min           % 当学习速度小于最小学习速度时，退出
                             break;
                         end
                     end
@@ -216,7 +211,7 @@ classdef SAE < learn.neural.StackedRBM
     end
     
     methods(Static)
-        function sae = unit_test()
+        function [] = unit_test()
             clear all;
             close all;
             rng(1);
@@ -224,12 +219,12 @@ classdef SAE < learn.neural.StackedRBM
             [data,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
             [D,S,M] = size(data); N = S * M;
             
-            configure = [D,500,500,2000,2];
+            configure = [D,500,500,64];
             sae = learn.neural.SAE(configure);
             
-            parameters.learn_rate = [1e-6,1e-2];
-            parameters.weight_cost = 1e-4;
-            parameters.max_it = 1e6;
+            parameters.learn_rate = 1e-1;
+            parameters.max_it = M*100;
+            parameters.decay = 9;
             sae = sae.pretrain(data,parameters);
             save('sae_mnist_pretrain.mat','sae');
             % load('sae_mnist_pretrain.mat');
@@ -240,6 +235,10 @@ classdef SAE < learn.neural.StackedRBM
             disp(sprintf('pretrain-error:%f',error));
             
             data = reshape(data,D,S,M);
+            clear parameters;
+            parameters.learn_rate_max = 1e-1;
+            parameters.learn_rate_min = 1e-6;
+            parameters.momentum = 0.9;
             parameters.max_it = 1e6;
             parameters.case = 2; % 无抽样的情况
             sae = sae.train(data,parameters);
