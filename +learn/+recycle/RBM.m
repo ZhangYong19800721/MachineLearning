@@ -51,7 +51,7 @@ classdef RBM
             v_v_bias = zeros(size(obj.visual_bias));
             
             % 初始化动量倍率为0.5
-            momentum = 0.5;
+            momentum = 0.9;
             
             recon_error_list = zeros(1,M);
             for m = 1:M  % 初始化重建误差列表的移动平均值
@@ -85,11 +85,9 @@ classdef RBM
                 
                 disp(sprintf('重建误差:%f 迭代次数:%d 学习速度:%f',recon_error_ave_new,it,learn_rate));
                 
-                momentum = min([momentum * 1.01,0.9]); % 动量倍率最大为0.9，初始值为0.5，大约迭代60步之后动量倍率达到0.9。
-                
-                v_weight = momentum * v_weight + learn_rate * (d_weight - parameters.weight_cost * obj.weight_v2h);
-                v_h_bias = momentum * v_h_bias + learn_rate * d_h_bias;
-                v_v_bias = momentum * v_v_bias + learn_rate * d_v_bias;
+                v_weight = momentum * v_weight + (1 - momentum) * learn_rate * (d_weight - parameters.weight_cost * obj.weight_v2h);
+                v_h_bias = momentum * v_h_bias + (1 - momentum) * learn_rate * d_h_bias;
+                v_v_bias = momentum * v_v_bias + (1 - momentum) * learn_rate * d_v_bias;
                 
                 obj.weight_v2h  = obj.weight_v2h  + v_weight;
                 obj.hidden_bias = obj.hidden_bias + v_h_bias;
@@ -182,24 +180,26 @@ classdef RBM
     end
     
     methods(Static)
-        function [rbm,e] = unit_test()
+        function [] = unit_test()
             clear all;
             close all;
-            [data,~,~,~] = learn.import_mnist('./+learn/mnist.mat');
+            rng(1);
+            
+            [data,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
             [D,S,M] = size(data); N = S * M;
      
-            rbm = learn.RBM(D,500);
+            rbm = learn.recycle.RBM(D,500);
             rbm = rbm.initialize(data);
             
-            parameters.learn_rate = [1e-6,1e-2];
-            parameters.weight_cost = 1e-4;
+            parameters.learn_rate = [1e-1,1e-1];
+            parameters.weight_cost = 0;
             parameters.max_it = 1e5;
             rbm = rbm.pretrain(data,parameters);
             
             save('rbm.mat','rbm');
          
             data = reshape(data,D,[]);
-            recon_data = rbm.reconstruct(data);
+            recon_data = rbm.rebuild(data);
             e = sum(sum((255*recon_data - 255*data).^2)) / N;
         end
     end
