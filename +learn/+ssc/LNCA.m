@@ -17,11 +17,16 @@ classdef LNCA < learn.neural.PerceptionS
     methods
         %% 编码
         function c = encode(obj,points,option)
+            %% 参数选项
             if nargin <= 2
                 option = 'real';
             end
+            
+            %% 初始化
             [~,N] = size(points); % N样本个数
-            code = obj.do(points,1);
+            
+            %% 计算编码
+            code = obj.do(points,1); % 执行正向计算
             if strcmp(option,'binary')
                 c = code > repmat(obj.t,1,N);
             elseif strcmp(option,'real')
@@ -35,10 +40,10 @@ classdef LNCA < learn.neural.PerceptionS
         function obj = findt(obj,points)
             code = obj.encode(points);
             [D,~] = size(code); % 编码维度
-            parfor d = 1:D
-                [a(d),b(d)] = learn.cluster.KMeansPlusPlus(code(d,:),2);
+            for d = 1:D
+                center = learn.cluster.KMeansPlusPlus(code(d,:),2);
+                obj.t(d) = sum(center)/2;
             end
-            obj.t = (a + b)/2;
             obj.t = reshape(obj.t,[],1);
         end
     end

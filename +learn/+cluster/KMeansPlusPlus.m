@@ -15,10 +15,11 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
     center_points = points(:,center_points_idx); % 初始化第1个中心点
     distance_matrix = inf(K,N);
     while length(center_points_idx) < K
-        c = length(center_points_idx)
+        c = length(center_points_idx);
+        disp(sprintf('c = %d',c));
         center_point_c = repmat(center_points(:,c),1,N);
         delta = points - center_point_c;
-        distance_matrix(c,:) = sum(delta.^2);
+        distance_matrix(c,:) = sum(delta.^2,1);
      
         min_distance_matrix = min(distance_matrix);
         prob = min_distance_matrix ./ sum(min_distance_matrix);
@@ -37,7 +38,7 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
         parfor k = 1:K
             center_point_k = repmat(center_points(:,k),1,N);
             delta = points - center_point_k;
-            distance_matrix(k,:) = sqrt(sum(delta.^2));
+            distance_matrix(k,:) = sqrt(sum(delta.^2,1));
         end
         
         [~,min_idx] = min(distance_matrix);
@@ -47,7 +48,8 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
             center_points(:,k) = sum(points(:,min_idx == k),2) / sum(min_idx == k);
         end
         
-        norm_value = norm(old_center_points - center_points)
+        norm_value = norm(old_center_points - center_points);
+        disp(sprintf('norm-value:%f',norm_value));
         if norm_value <= 0.001
             parfor k = 1:K
                 center_point_k = repmat(center_points(:,k),1,N);

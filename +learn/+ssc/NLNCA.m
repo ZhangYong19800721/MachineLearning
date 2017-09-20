@@ -41,10 +41,10 @@ classdef NLNCA < learn.neural.PerceptionS
         function obj = findt(obj,points)
             code = obj.encode(points); % ¼ÆËã±àÂë
             [D,~] = size(code); % ±àÂëÎ¬¶È
-            parfor d = 1:D
-                [a(d),b(d)] = learn.cluster.KMeansPlusPlus(code(d,:),2);
+            for d = 1:D
+                center = learn.cluster.KMeansPlusPlus(code(d,:),2);
+                obj.t(d) = sum(center)/2;
             end
-            obj.t = (a + b)/2;
             obj.t = reshape(obj.t,[],1);
         end
     end
