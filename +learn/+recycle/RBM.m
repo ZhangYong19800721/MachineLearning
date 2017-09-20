@@ -191,16 +191,15 @@ classdef RBM
             rbm = learn.recycle.RBM(D,500);
             rbm = rbm.initialize(data);
             
-            parameters.learn_rate = [1e-1,1e-1];
-            parameters.weight_cost = 0;
+            parameters.learn_rate = [1e-6,1e-1];
+            parameters.weight_cost = 1e-4;
             parameters.max_it = 1e5;
             rbm = rbm.pretrain(data,parameters);
-            
-            save('rbm.mat','rbm');
          
             data = reshape(data,D,[]);
             recon_data = rbm.rebuild(data);
-            e = sum(sum((255*recon_data - 255*data).^2)) / N;
+            e = sum(sum((recon_data - data).^2)) / N;
+            disp(sprintf('ÖØ½¨Îó²î:%f',e));
         end
     end
     
