@@ -11,7 +11,7 @@ sae = learn.neural.SAE(configure);
 
 parameters.learn_rate = 1e-1;
 parameters.max_it = M*100;
-parameters.decay = 99;
+parameters.decay = 10;
 sae = sae.pretrain(data,parameters);
 save('sae_pretrained.mat','sae');
 % load('sae_mnist_pretrain.mat');

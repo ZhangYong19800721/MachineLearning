@@ -46,7 +46,7 @@ function [x,y] = minimize_sgd(F,x0,parameters)
     
     %% 开始迭代
     for it = 0:parameters.max_it
-        r  = parameters.learn_rate / (1 + parameters.decay * it / parameters.max_it);
+        r  = parameters.learn_rate - (1 - 1/parameters.decay) * parameters.learn_rate / parameters.max_it;
         g1 = F.gradient(x1,it); % 计算梯度
         y1 = F.object(x1,it); % 计算目标函数值
         ng1 = norm(g1); % 计算梯度模
