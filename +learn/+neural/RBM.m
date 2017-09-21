@@ -182,6 +182,7 @@ classdef RBM
             
             parameters.learn_rate = 1e-1;
             parameters.max_it = M*100; % 将所有的训练数据遍历X遍
+            parameters.decay = 100;
             rbm = rbm.pretrain(data,parameters);
             
             data = reshape(data,D,[]);

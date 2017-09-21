@@ -35,7 +35,7 @@ function [x,y] = minimize_sgd(F,x0,parameters)
     end
     
     if ~isfield(parameters,'decay') % 给出参数但是没有给出decay
-        parameters.decay = 0; % 缺省情况下不降低学习速度
+        parameters.decay = 1; % 缺省情况下不降低学习速度
         disp(sprintf('调用minimize_sgd函数时参数集中没有decay参数，将使用默认值%f',parameters.decay));
     end
     
