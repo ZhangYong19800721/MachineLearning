@@ -155,6 +155,14 @@ classdef SAE < learn.neural.StackedRBM
                 inc{l}.hidden_bias = zeros(size(obj.rbms{l}.hidden_bias));
             end
             
+            wxb = cell(1,L);
+            for l = 1:L
+                wxb{l}.weight_v2h = obj.rbms{l}.weight_v2h;
+                wxb{l}.weight_h2v = obj.rbms{l}.weight_h2v;
+                wxb{l}.visual_bias = obj.rbms{l}.visual_bias;
+                wxb{l}.hidden_bias = obj.rbms{l}.hidden_bias;
+            end
+            
             %% 开始迭代
             for it = 0:parameters.max_it
                 m = mod(it,M) + 1;
@@ -196,12 +204,25 @@ classdef SAE < learn.neural.StackedRBM
                 
                 if m == M
                     if recon_error_ave_new > recon_error_ave_old % 当经过M次迭代的平均重建误差不下降时
+                        for l = 1:L % 恢复上一次的最优权值
+                            obj.rbms{l}.weight_v2h = wxb{l}.weight_v2h;
+                            obj.rbms{l}.weight_h2v = wxb{l}.weight_h2v;
+                            obj.rbms{l}.visual_bias = wxb{l}.visual_bias;
+                            obj.rbms{l}.hidden_bias = wxb{l}.hidden_bias;
+                        end
                         learn_rate = learn_rate / 10;            % 就缩减学习速度
                         if learn_rate < learn_rate_min           % 当学习速度小于最小学习速度时，退出
                             break;
                         end
+                    else
+                        for l = 1:L % 记录最优权值
+                            wxb{l}.weight_v2h = obj.rbms{l}.weight_v2h;
+                            wxb{l}.weight_h2v = obj.rbms{l}.weight_h2v;
+                            wxb{l}.visual_bias = obj.rbms{l}.visual_bias;
+                            wxb{l}.hidden_bias = obj.rbms{l}.hidden_bias;
+                        end
+                        recon_error_ave_old = recon_error_ave_new;
                     end
-                    recon_error_ave_old = recon_error_ave_new;
                 end
                 
                 %% 画图
