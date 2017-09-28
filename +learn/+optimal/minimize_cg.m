@@ -58,8 +58,13 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
     end
 
     %% 计算起始位置的函数值、梯度、梯度模
-    x1 = x0; y1 = F.object(x1); g1 = F.gradient(x1); ng1 = norm(g1); % 起始点为x0,计算函数值、梯度、梯度模 
-    if ng1 < parameters.epsilon, return; end % 如果梯度足够小，直接返回
+    x1 = x0; 
+    y1 = F.object(x1); 
+    g1 = F.gradient(x1); 
+    ng1 = norm(g1); % 起始点为x0,计算函数值、梯度、梯度模 
+    if ng1 < parameters.epsilon
+        return; 
+    end % 如果梯度足够小，直接返回
     
     %% 迭代寻优
     d1 = -g1; % 初始搜索方向为负梯度方向
