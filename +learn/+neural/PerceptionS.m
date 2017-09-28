@@ -79,7 +79,7 @@ classdef PerceptionS
                     end
                     gx = sum(gx,3);
                     g(iw{l},1) = g(iw{l},1) + gx(:);
-                    g(ib{l},1) = g(ib{l},1) + sum(s{l})';
+                    g(ib{l},1) = g(ib{l},1) + sum(s{l},1)';
                 end
             end
         end

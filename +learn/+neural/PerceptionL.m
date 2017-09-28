@@ -79,7 +79,7 @@ classdef PerceptionL
                     end
                     gx = sum(gx,3);
                     g(iw{l},1) = g(iw{l},1) + gx(:);
-                    g(ib{l},1) = g(ib{l},1) + sum(s{l})';
+                    g(ib{l},1) = g(ib{l},1) + sum(s{l},1)';
                 end
             end
         end
@@ -160,6 +160,7 @@ classdef PerceptionL
                     0.01 * randn(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]')); % 将权值初始化为0附近的随机数
                 obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m},1) = ...
                     zeros(size([obj.star_b_idx{m}:obj.stop_b_idx{m}]')); % 将偏置值初始化为0
+                %obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m},1) = 0.1 * ones(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]'));
             end
         end
         
