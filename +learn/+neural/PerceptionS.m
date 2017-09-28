@@ -1,6 +1,6 @@
 classdef PerceptionS
     %PERCEPTIONS 感知器
-    %  最后一层输出为sigmoid神经元
+    %  最后一层输出为sigmoid神经元，采用交叉熵作为目标函数，可以使用CG、BFGS算法进行寻优
     
     properties
         weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中[P,1]
@@ -10,6 +10,8 @@ classdef PerceptionS
         stop_w_idx;  % stop_w_idx{m}表示第m层的权值的结束位置
         star_b_idx;  % star_b_idx{m}表示第m层的偏置的起始位置
         stop_b_idx;  % stop_b_idx{m}表示第m层的偏置的结束位置
+        points; % 训练数据
+        labels; % 训练标签
     end
     
     methods % 构造函数
@@ -35,6 +37,62 @@ classdef PerceptionS
     end
     
     methods
+        %% 梯度计算
+        function g = gradient(obj,x,m)
+            %% 初始化
+            [D,S,M] = size(obj.points); % D数据维度，S样本点数，M样本批数
+            P = size(obj.weight,1); % P参数个数
+            L = length(obj.num_hidden); % L层数
+            g = zeros(P,1); % 梯度
+            
+            if nargin <= 2 % 没有给出i参数，默认对全部训练数据求导数
+                for m = 1:M
+                    g = g + obj.gradient(x,m);
+                end
+            else
+                m = 1 + mod(m,M);
+                minibatch = obj.points(:,:,m); % 取一个minibatch
+                minilabel = obj.labels(:,:,m); % 取一个minibatch
+                obj.weight = x; % 初始化权值
+                s = cell(1,L); % 敏感性
+                w = cell(1,L); iw = cell(1,L); % 权值
+                b = cell(1,L); ib = cell(1,L); % 偏置
+                for l = 1:L % 取得每一层的权值和偏置值
+                    [w{l},iw{l}] = obj.getw(l);
+                    [b{l},ib{l}] = obj.getb(l);
+                end
+                
+                %% 计算梯度
+                [y,a] = obj.do(minibatch); % 执行正向计算
+                s{L} = (y - minilabel)'; % 计算顶层的敏感性
+                for l = (L-1):-1:1  % 反向传播敏感性
+                    s{l} = (s{l+1} * w{l+1}) .* (a{l}.*(1-a{l}))';
+                end
+                
+                for l = 1:L
+                    H = obj.num_hidden{l};
+                    V = obj.num_visual{l};
+                    if l == 1
+                        gx = reshape(repmat(s{l}',V,1),H,V,S) .* reshape(repelem(minibatch,H,1),H,V,S);
+                    else
+                        gx = reshape(repmat(s{l}',V,1),H,V,S) .* reshape(repelem(a{l-1}   ,H,1),H,V,S);
+                    end
+                    gx = sum(gx,3);
+                    g(iw{l},1) = g(iw{l},1) + gx(:);
+                    g(ib{l},1) = g(ib{l},1) + sum(s{l})';
+                end
+            end
+        end
+        
+        %% 计算目标函数
+        function y = object(obj,x)
+            % 计算交叉熵
+            obj.weight = x;
+            z = obj.do(obj.points);
+            y = obj.labels .* log(z) + (1-obj.labels) .* log(1-z);
+            y = -sum(sum(y));
+        end
+        
         function obj = initialize(obj)
             M = length(obj.num_hidden); % 得到层数
             for m = 1:M
@@ -45,23 +103,23 @@ classdef PerceptionS
             end
         end
         
-        function [y,a] = do(obj,x,M)
+        function [y,a] = do(obj,x,L)
             % 多层感知器的计算过程
             % y 是最后的输出
             
             if nargin <= 2
-                M = length(obj.num_hidden); % 得到层数
-            end
-       
-            a = cell(1,M);          
-            for m = 1:M
-                w = reshape(obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m}),obj.num_hidden{m},obj.num_visual{m});
-                b = reshape(obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m}),obj.num_hidden{m},1);
-                a{m} = learn.tools.sigmoid(w * x + repmat(b,1,size(x,2)));
-                x = a{m};
+                L = length(obj.num_hidden); % 得到层数
             end
             
-            y = a{M};
+            a = cell(1,L);
+            for l = 1:L
+                w = obj.getw(l);
+                b = obj.getb(l);
+                a{l} = learn.tools.sigmoid(w * x + repmat(b,1,size(x,2)));
+                x = a{l};
+            end
+            
+            y = a{L};
         end
         
         function [w,r] = getw(obj,m)
@@ -73,10 +131,39 @@ classdef PerceptionS
             r = obj.star_b_idx{m}:obj.stop_b_idx{m};
             b = reshape(obj.weight(r),[],1);
         end
+        
+        function obj = train(obj,points,labels,parameters)
+            if nargin <= 3
+                parameters = [];
+                disp('调用train函数时没有给出参数集，将使用默认参数集');
+            end
+            
+            if ~isfield(parameters,'algorithm')
+                parameters.algorithm = 'CG';
+                disp(sprintf('没有algorithm参数，将使用默认值%s',parameters.algorithm));
+            end
+            
+            %% 绑定训练数据
+            obj.points = points;
+            obj.labels = labels;
+            
+            %% 寻优
+            if strcmp(parameters.algorithm,'CG')
+                obj.weight = learn.optimal.minimize_cg(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'BFGS')
+                obj.weight = learn.optimal.minimize_bfgs(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'LM')
+                obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
+            end
+            
+            %% 解除绑定
+            obj.points = [];
+            obj.labels = [];
+        end
     end
     
     methods(Static)
-        function p = unit_test1()
+        function [] = unit_test1()
             clear all;
             close all;
             rng(1);
@@ -84,10 +171,10 @@ classdef PerceptionS
             N = 2000;
             x = linspace(-2,2,N);
             k = 4;
-            f = @(x)0.5 + 0.4 * sin(k * pi * x / 4);
+            f = @(x)0.5 + 0.5 * sin(k * pi * x / 4);
             l = f(x);
             
-            configure = [1,10,1];
+            configure = [1,6,1];
             p = learn.neural.PerceptionS(configure);
             p = p.initialize();
             
@@ -95,12 +182,7 @@ classdef PerceptionS
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            lmbp = learn.neural.LMBPS(x,l,p);
-            
-            parameters.epsilon = 1e-3;  % 当梯度的范数小于epsilon时迭代结束
-            parameters.max_it = 1e5; % 最大迭代次数
-            weight = learn.optimal.minimize_lm(lmbp,p.weight,parameters);
-            p.weight = weight;
+            p = p.train(x,l);
             
             figure(3);
             y = p.do(x);
@@ -110,33 +192,8 @@ classdef PerceptionS
             disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
         
-        function ps = unit_test2()
-            clear all;
-            close all;
-            rng(1);
+        function [] = unit_test2()
             
-            [mnist,~,~,~] = learn.data.import_mnist('./+learn/+data/mnist.mat');
-            [D,S,M] = size(mnist); mnist = reshape(mnist,D,[]); N = S*M;
-            
-            configure = [D,500,256,500,D];
-            ps = learn.neural.PerceptionS(configure);
-            ps = ps.initialize();
-            
-            recon_mnist = ps.do(mnist);
-            disp(sprintf('rebuild_error:%f',sum(sum((recon_mnist - mnist).^2)) / N));
-            
-            cgbps = learn.neural.CGBPS(mnist,mnist,ps);
-
-            parameters.epsilon = 1e-3;
-            parameters.alfa = 100;
-            parameters.beda = 1e-5;
-            parameters.max_it = 1e5;
-            parameters.reset = 500;
-            weight = learn.optimal.minimize_cg(cgbps,ps.weight,parameters);
-            ps.weight = weight;
-            
-            recon_mnist = ps.do(mnist);
-            disp(sprintf('rebuild_error:%f',sum(sum((recon_mnist - mnist).^2)) / N));
         end
     end
 end
