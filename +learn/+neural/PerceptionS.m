@@ -193,7 +193,30 @@ classdef PerceptionS
         end
         
         function [] = unit_test2()
+            clear all;
+            close all;
+            rng(1);
             
+            x = [0.8 0.2];
+            l = [0.2 0.8];
+            
+            configure = [1,2,1];
+            p = learn.neural.PerceptionS(configure);
+            p = p.initialize();
+            
+            figure(1);
+            plot(x,l); hold on;
+            plot(x,p.do(x)); hold off;
+            
+            parameters.epsilon = 1e-8;
+            p = p.train(x,l,parameters);
+            
+            figure(3);
+            y = p.do(x);
+            plot(x,l,'b'); hold on;
+            plot(x,y,'r.'); hold off;
+            
+            disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
     end
 end
