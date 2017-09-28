@@ -218,6 +218,8 @@ classdef PerceptionL
                 obj.weight = learn.optimal.minimize_bfgs(obj,obj.weight,parameters);
             elseif strcmp(parameters.algorithm,'LM')
                 obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'ADAM')
+                obj.weight = learn.optimal.minimize_adam(obj,obj.weight,parameters);
             end
             
             %% ½â³ý°ó¶¨
@@ -246,7 +248,9 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            paramters.algorithm = 'LM';
+            % paramters.algorithm = 'LM';
+            % paramters.algorithm = 'BFGS';
+            paramters.algorithm = 'CG';
             p = p.train(x,l,paramters);
             
             figure(3);
@@ -256,7 +260,7 @@ classdef PerceptionL
             
             disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
-        
+
         function [] = unit_test2()
             clear all;
             close all;
@@ -276,70 +280,8 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            p = p.train(reshape(x,1,N,1),reshape(l,1,N,1));
-            
-            figure(3);
-            y = p.do(x);
-            plot(x,l,'b'); hold on;
-            plot(x,y,'r.'); hold off;
-            
-            disp(sprintf('error:%f',sum(sum((l - y).^2))));
-        end
-        
-        function [] = unit_test3()
-            clear all;
-            close all;
-            rng(1);
-            
-            N = 2000;
-            x = linspace(-2,2,N);
-            k = 4;
-            f = @(x)sin(k * pi * x / 4);
-            l = f(x);
-            
-            configure = [1,6,1];
-            p = learn.neural.PerceptionL(configure);
-            p = p.initialize();
-            
-            figure(1);
-            plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
-            
-            paramters.algorithm = 'BFGS';
-            p = p.train(x,l,paramters);
-            
-            figure(3);
-            y = p.do(x);
-            plot(x,l,'b'); hold on;
-            plot(x,y,'r.'); hold off;
-            
-            disp(sprintf('error:%f',sum(sum((l - y).^2))));
-        end
-        
-        function [] = unit_test4()
-            clear all;
-            close all;
-            rng(1);
-            
-            N = 2000;
-            x = linspace(-2,2,N);
-            k = 4;
-            f = @(x)sin(k * pi * x / 4);
-            l = f(x);
-            
-            configure = [1,6,1];
-            p = learn.neural.PerceptionL(configure);
-            p = p.initialize();
-            
-            figure(1);
-            plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
-            
-            
-            p.points = reshape(x,1,20,100);
-            p.labels = reshape(l,1,20,100);
-            weight = learn.optimal.minimize_adam(p,p.weight);
-            p.weight = weight;
+            paramters.algorithm = 'ADAM';
+            p = p.train(reshape(x,1,20,100),reshape(l,1,20,100),paramters);
             
             figure(3);
             y = p.do(x);
