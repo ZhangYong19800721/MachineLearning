@@ -26,7 +26,7 @@ function [x1,y1] = minimize_cg(F,x0,parameters)
     end
     
     if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
-        parameters.epsilon = 1e-6; 
+        parameters.epsilon = 1e-3; 
         disp(sprintf('调用minimize_cg函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
     end
     

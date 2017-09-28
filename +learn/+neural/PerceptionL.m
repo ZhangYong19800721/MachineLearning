@@ -111,47 +111,47 @@ classdef PerceptionL
         %% 计算hessen矩阵
         function [H,G] = hessen(obj,x)
             %% 初始化
-            obj.percep.weight = x; % 设置参数
+            obj.weight = x; % 设置参数
             [K,~] = size(obj.labels); % K标签维度
             [~,N] = size(obj.points); % N样本个数
-            P = numel(obj.percep.weight); % P参数个数
-            M = length(obj.percep.num_hidden); % M层数
+            P = numel(obj.weight); % P参数个数
+            L = length(obj.num_hidden); % L层数
             H = zeros(P,P); % Hessian矩阵
             G = zeros(P,1); % 梯度向量
-            s = cell(1,M); % 敏感性
-            w = cell(1,M); cw = cell(1,M); % 权值
-            b = cell(1,M); cb = cell(1,M); % 偏置
-            for m = 1:M % 取得每一层的权值和偏置值
-                [w{m},cw{m}] = obj.percep.getw(m);
-                [b{m},cb{m}] = obj.percep.getb(m);
+            s = cell(1,L); % 敏感性
+            w = cell(1,L); iw = cell(1,L); % 权值
+            b = cell(1,L); ib = cell(1,L); % 偏置
+            for l = 1:L % 取得每一层的权值和偏置值
+                [w{l},iw{l}] = obj.getw(l);
+                [b{l},ib{l}] = obj.getb(l);
             end
             
             %% 计算Jacobi矩阵，Hessian矩阵，Gradient梯度
-            [~,a] = obj.percep.do(obj.points); % 执行正向计算
+            [~,a] = obj.do(obj.points); % 执行正向计算
             for n = 1:N
                 %% 反向传播敏感性
-                s{M} = -eye(K); % 计算顶层的敏感性
-                for m = (M-1):-1:1  % 反向传播
-                    s{m} = s{m+1} * w{m+1} * diag(a{m}(:,n).*(1-a{m}(:,n)));
+                s{L} = -eye(K); % 计算顶层的敏感性
+                for l = (L-1):-1:1  % 反向传播
+                    s{l} = s{l+1} * w{l+1} * diag(a{l}(:,n).*(1-a{l}(:,n)));
                 end
                 
                 %% 计算Jacobi矩阵
                 J = zeros(K,P);
-                for m = 1:M
-                    if m == 1
-                        Jw = s{m} * kron(eye(obj.percep.num_hidden{m}),obj.points(:,n)'); % 敏感性对权值的导数
-                        Jb = s{m}; 
+                for l = 1:L
+                    if l == 1
+                        Jw = s{l} * kron(eye(obj.num_hidden{l}),obj.points(:,n)'); % 敏感性对权值的导数
+                        Jb = s{l}; 
                     else
-                        Jw = s{m} * kron(eye(obj.percep.num_hidden{m}),a{m-1}(:,n)'); % 敏感性对权值的导数 
-                        Jb = s{m};
+                        Jw = s{l} * kron(eye(obj.num_hidden{l}),a{l-1}(:,n)'); % 敏感性对权值的导数 
+                        Jb = s{l};
                     end
-                    J(:,cw{m}) = Jw;
-                    J(:,cb{m}) = Jb;
+                    J(:,iw{l}) = Jw;
+                    J(:,ib{l}) = Jb;
                 end
                 
                 %% 计算Hessian矩阵、Gradient梯度
                 H = H + J'*J;
-                G = G + 2*J'*(obj.labels(:,n) - a{M}(:,n));
+                G = G + 2*J'*(obj.labels(:,n) - a{L}(:,n));
             end
         end
         
@@ -198,17 +198,33 @@ classdef PerceptionL
             b = reshape(obj.weight(r),[],1);
         end
         
-        function obj = train(obj,points,labels)
+        function obj = train(obj,points,labels,parameters)
+            if nargin <= 3
+                parameters = [];
+                disp('调用train函数时没有给出参数集，将使用默认参数集');
+            end
+            
+            if ~isfield(parameters,'algorithm') 
+                parameters.algorithm = 'CG'; 
+                disp(sprintf('没有algorithm参数，将使用默认值%s',parameters.algorithm));
+            end
+            
             %% 绑定训练数据
             obj.points = points;
             obj.labels = labels;
             
             %% 寻优
-            obj.weight = learn.optimal.minimize_cg(obj,obj.weight);
+            if strcmp(parameters.algorithm,'CG')
+                obj.weight = learn.optimal.minimize_cg(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'BFGS')
+                obj.weight = learn.optimal.minimize_bfgs(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'LM')
+                obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
+            end
             
             %% 解除绑定
-            obj.points = points;
-            obj.labels = labels;
+            obj.points = [];
+            obj.labels = [];
         end
     end
     
@@ -232,9 +248,8 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            lmbp = learn.neural.LMBPL(x,l,p);
-            weight = learn.optimal.minimize_lm(lmbp,p.weight);
-            p.weight = weight;
+            paramters.algorithm = 'LM';
+            p = p.train(x,l,paramters);
             
             figure(3);
             y = p.do(x);
@@ -273,7 +288,7 @@ classdef PerceptionL
             disp(sprintf('error:%f',sum(sum((l - y).^2))));
         end
         
-        function p = unit_test3()
+        function [] = unit_test3()
             clear all;
             close all;
             rng(1);
@@ -292,9 +307,8 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            cgbp = learn.neural.CGBPL(x,l,p);
-            weight = learn.optimal.minimize_bfgs(cgbp,p.weight);
-            p.weight = weight;
+            paramters.algorithm = 'BFGS';
+            p = p.train(x,l,paramters);
             
             figure(3);
             y = p.do(x);
