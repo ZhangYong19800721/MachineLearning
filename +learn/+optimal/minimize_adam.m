@@ -17,48 +17,55 @@ function [x,y] = minimize_adam(F,x0,parameters)
     
     if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
         parameters.epsilon = 1e-8; 
-        disp(sprintf('调用minimize_adam函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+        disp(sprintf('没有epsilon参数，将使用默认值%f',parameters.epsilon));
+    end
+    
+    if ~isfield(parameters,'omiga') % 给出参数但是没有给出omiga
+        parameters.omiga = 1e-6; 
+        disp(sprintf('没有omiga参数，将使用默认值%f',parameters.omiga));
     end
     
     if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
         parameters.max_it = 1e6;
-        disp(sprintf('调用minimize_adam函数时参数集中没有max_it参数，将使用默认值%d',parameters.max_it));
+        disp(sprintf('没有max_it参数，将使用默认值%d',parameters.max_it));
     end
     
     if ~isfield(parameters,'learn_rate') % 给出参数但是没有给出learn_rate
         parameters.learn_rate = 1e-3;
-        disp(sprintf('调用minimize_adam函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
+        disp(sprintf('没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
     end
     
     if ~isfield(parameters,'beda1') 
         parameters.beda1 = 0.9;
-        disp(sprintf('调用minimize_adam函数时参数集中没有beda1参数，将使用默认值%f',parameters.beda1));
+        disp(sprintf('没有beda1参数，将使用默认值%f',parameters.beda1));
     end
     
     if ~isfield(parameters,'beda2') 
         parameters.beda2 = 0.999;
-        disp(sprintf('调用minimize_adam函数时参数集中没有beda2参数，将使用默认值%f',parameters.beda2));
+        disp(sprintf('没有beda2参数，将使用默认值%f',parameters.beda2));
     end
     
     %% 初始化
     m = 0; % 初始化第一个递增向量
     v = 0; % 初始化第二个递增向量
     x1 = x0;  % 起始点
+    y1 = F.object(x1); % 计算目标函数值
     
     %% 开始迭代
     for it = 1:parameters.max_it
         g1 = F.gradient(x1,it); % 计算梯度
-        y1 = F.object(x1,it); % 计算目标函数值
-        ng1 = norm(g1); % 计算梯度模
-        disp(sprintf('迭代次数:%d 学习速度:%f, 目标函数:%f 梯度模:%f ',it,parameters.learn_rate,y1,ng1));
-        if ng1 < parameters.epsilon
-            break; % 如果梯度足够小就结束迭代
-        end
         m  = parameters.beda1 * m + (1 - parameters.beda1) * g1;    % 更新第1个增量向量
         v  = parameters.beda2 * v + (1 - parameters.beda2) * g1.^2; % 更新第2个增量向量
         mb  = m / (1 - parameters.beda1^it); % 对第1个增量向量进行修正
         vb  = v / (1 - parameters.beda2^it); % 对第2个增量向量进行修正
-        x1 = x1 - parameters.learn_rate * mb ./ (sqrt(vb) + parameters.epsilon);
+        x2 = x1 - parameters.learn_rate * mb ./ (sqrt(vb) + parameters.epsilon);
+        y2 = F.object(x2); % 计算目标函数值
+        disp(sprintf('迭代次数:%d 学习速度:%f 目标函数:%f 函数降幅:%f ',it,parameters.learn_rate,y2,abs(y1-y2)));
+        if abs(y1 - y2) < parameters.omiga
+            x1 = x2; y1 = y2;
+            break; % 如果梯度足够小就结束迭代
+        end
+        x1 = x2; y1 = y2;
     end
     
     %% 返回
