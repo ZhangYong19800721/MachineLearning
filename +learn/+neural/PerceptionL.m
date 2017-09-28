@@ -1,6 +1,6 @@
 classdef PerceptionL
     %PERCEPTIONL 感知器
-    % 最后一层输出为线性神经元
+    % 最后一层输出为线性神经元，采用最小均方误差函数作为目标函数，可以使用CG、LM、BFGS算法进行寻优
     
     properties
         weight;      % 一维数组，所有层的权值和偏置值都包含在这个一维数组中[P,1]
@@ -55,18 +55,16 @@ classdef PerceptionL
                 minilabel = obj.labels(:,:,m); % 取一个minibatch
                 obj.weight = x; % 初始化权值
                 s  = cell(1,L); % 敏感性
-                w  = cell(1,L); % 权值
-                iw = cell(1,L); % 权值索引
-                b  = cell(1,L); % 偏置
-                ib = cell(1,L); % 偏置索引
+                w  = cell(1,L); iw = cell(1,L); % 权值
+                b  = cell(1,L); ib = cell(1,L); % 偏置
                 for l = 1:L     % 取得每一层的权值和偏置值
                     [w{l},iw{l}] = obj.getw(l);
                     [b{l},ib{l}] = obj.getb(l);
                 end
                 
                 %% 计算梯度
-                [~,a] = obj.do(minibatch); % 执行正向计算
-                s{l} = -2 * (minilabel - a{l})'; % 计算顶层的敏感性
+                [y,a] = obj.do(minibatch); % 执行正向计算
+                s{L} = -2 * (minilabel - y)'; % 计算顶层的敏感性
                 for l = (L-1):-1:1  % 反向传播敏感性
                     s{l} = (s{l+1} * w{l+1}) .* (a{l}.*(1-a{l}))';
                 end
