@@ -89,6 +89,7 @@ classdef PerceptionS
             % ¼ÆËã½»²æìØ
             obj.weight = x;
             z = obj.do(obj.points);
+            z(z<=0) = eps; z(z>=1) = 1 - eps;
             y = obj.labels .* log(z) + (1-obj.labels) .* log(1-z);
             y = -sum(sum(y));
         end
@@ -170,11 +171,11 @@ classdef PerceptionS
             
             N = 2000;
             x = linspace(-2,2,N);
-            k = 4;
+            k = 2;
             f = @(x)0.5 + 0.5 * sin(k * pi * x / 4);
             l = f(x);
             
-            configure = [1,6,1];
+            configure = [1,12,1];
             p = learn.neural.PerceptionS(configure);
             p = p.initialize();
             
@@ -182,7 +183,11 @@ classdef PerceptionS
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            p = p.train(x,l);
+            paramters.algorithm = 'BFGS';
+            % paramters.algorithm = 'CG';
+            paramters.epsilon = 1e-3;
+            paramters.max_it = 1e6;
+            p = p.train(x,l,paramters);
             
             figure(3);
             y = p.do(x);
