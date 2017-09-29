@@ -1,16 +1,19 @@
 clear all
 close all
 
-load('images.mat'); points = double(points)/255;
+load('tiny_images.mat'); 
+[D,S,M] = size(points);
+points = double(points)/255;
 load('sae_trained.mat')
 
+points = reshape(points,D,[]);
 code = sae.encode(points,'nosample');
-t = zeros(64,1);
+thresh = zeros(64,1);
 
 for n = 1:64
     c = learn.cluster.KMeansPlusPlus(code(n,:),2);
-    t(n) = mean(c);
+    thresh(n) = mean(c);
 end
 
-code = code > repmat(t,1,size(code,2));
-save('code.mat','code')
+code = code > repmat(thresh,1,size(code,2));
+save('thresh.mat','thresh')
