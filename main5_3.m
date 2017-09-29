@@ -3,9 +3,12 @@ close all;
 rng(1);
 
 load('images.mat'); points = double(points)/255; N = size(points,2);
-load('code.mat');
+load('sae_trained.mat');
+load('thresh.mat');
 
-query_id = 15;
+code = sae.encode(points,'nosample');
+code = code > repmat(thresh,1,size(code,2));
+query_id = 2102;
 query_code = code(:,query_id);
 query_code = repmat(query_code,1,N);
 match_idx = sum(xor(query_code,code)) <= 0;
