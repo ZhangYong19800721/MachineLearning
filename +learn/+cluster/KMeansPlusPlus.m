@@ -50,7 +50,7 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
         
         norm_value = norm(old_center_points - center_points);
         disp(sprintf('norm-value:%f',norm_value));
-        if norm_value <= 0.001
+        if norm_value <= 0.0001
             parfor k = 1:K
                 center_point_k = repmat(center_points(:,k),1,N);
                 delta = points - center_point_k;
