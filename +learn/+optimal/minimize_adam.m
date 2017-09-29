@@ -75,7 +75,7 @@ function [x,y] = minimize_adam(F,x0,parameters)
         x2 = x1 - r * mb ./ (sqrt(vb) + epsilon);
         y2 = F.object(x2,it); % 计算目标函数值
         z = (1-1/W)*z + (1/W)*y2;
-        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f',it,r,z));
+        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f 目标函数:%f',it,r,z,y2));
         x1 = x2; y1 = y2;
         if mod(it,W) == 0
             if z < k
