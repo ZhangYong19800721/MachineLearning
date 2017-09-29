@@ -20,7 +20,13 @@ end
 
 ps.weight = weight;
 
+parameters.algorithm = 'ADAM';
+parameters.learn_rate = 1e-3;
+parameters.window = 1e5;
+parameters.decay = 3;
+ps = ps.train(data,data,parameters);
+
 data = reshape(data,D,[]);
 recon_data = ps.compute(data);
 train_error = sum(sum((recon_data - data).^2)) / N;
-disp(sprintf('trained-error:%f',train_error));
+disp(sprintf('finetune-error:%f',train_error));

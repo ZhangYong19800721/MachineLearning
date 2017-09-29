@@ -85,13 +85,25 @@ classdef PerceptionS
         end
         
         %% 计算目标函数
-        function y = object(obj,x)
-            % 计算交叉熵
-            obj.weight = x;
-            z = obj.do(obj.points);
-            z(z<=0) = eps; z(z>=1) = 1 - eps;
-            y = obj.labels .* log(z) + (1-obj.labels) .* log(1-z);
-            y = -sum(sum(y));
+        function y = object(obj,x,m)
+            %% 初始化
+            [D,S,M] = size(obj.points);
+            
+            if nargin <= 2 % 没有给出m参数，默认对全部训练数据求导数
+                y = 0;
+                for m = 1:M
+                    y = y + obj.object(x,m);
+                end
+            else
+                obj.weight = x; % 初始化权值
+                m = 1 + mod(m,M);
+                minibatch = obj.points(:,:,m); % 取一个minibatch
+                minilabel = obj.labels(:,:,m); % 取一个minibatch
+                z = obj.compute(minibatch);
+                z(z<=0) = eps; z(z>=1) = 1 - eps;
+                y = minilabel .* log(z) + (1-minilabel) .* log(1-z); % 计算交叉熵
+                y = -sum(sum(y));
+            end
         end
         
         function obj = initialize(obj)
