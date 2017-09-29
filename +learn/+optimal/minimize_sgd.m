@@ -14,48 +14,59 @@ function [x,y] = minimize_sgd(F,x0,parameters)
         disp('调用minimize_sgd函数时没有给出参数集，将使用默认参数集');
     end
     
-    if ~isfield(parameters,'epsilon') % 给出参数但是没有给出epsilon
-        parameters.epsilon = 1e-3; 
-        disp(sprintf('调用minimize_sgd函数时参数集中没有epsilon参数，将使用默认值%f',parameters.epsilon));
+    if ~isfield(parameters,'window') % 给出参数但是没有给出window
+        parameters.window = 1e+3; 
+        disp(sprintf('没有window参数，将使用默认值%f',parameters.window));
     end
     
     if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
         parameters.max_it = 1e6;
-        disp(sprintf('调用minimize_sgd函数时参数集中没有max_it参数，将使用默认值%d',parameters.max_it));
+        disp(sprintf('没有max_it参数，将使用默认值%d',parameters.max_it));
     end
     
     if ~isfield(parameters,'momentum') % 给出参数但是没有给出momentum
         parameters.momentum = 0.9;
-        disp(sprintf('调用minimize_sgd函数时参数集中没有momentum参数，将使用默认值%f',parameters.momentum));
+        disp(sprintf('没有momentum参数，将使用默认值%f',parameters.momentum));
     end
     
     if ~isfield(parameters,'learn_rate') % 给出参数但是没有给出learn_rate
-        parameters.learn_rate = 0.1;
-        disp(sprintf('调用minimize_sgd函数时参数集中没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
+        parameters.learn_rate = 0.01;
+        disp(sprintf('没有learn_rate参数，将使用默认值%f',parameters.learn_rate));
     end
     
     if ~isfield(parameters,'decay') % 给出参数但是没有给出decay
         parameters.decay = 1; % 缺省情况下不降低学习速度
-        disp(sprintf('调用minimize_sgd函数时参数集中没有decay参数，将使用默认值%f',parameters.decay));
+        disp(sprintf('没有decay参数，将使用默认值%f',parameters.decay));
     end
     
     %% 初始化
     inc_x = zeros(size(x0)); % 参数的递增量
     m = parameters.momentum;
+    r0 = parameters.learn_rate;
+    D = parameters.decay;
+    T = parameters.max_it;
+    W = parameters.window;
     x1 = x0;  
+    y1 = F.object(x1,0); % 计算目标函数值
     
     %% 开始迭代
-    for it = 0:parameters.max_it
-        r  = parameters.learn_rate - (1 - 1/parameters.decay) * parameters.learn_rate * it / parameters.max_it;
+    z = y1 * ones(1,W); azx = inf; 
+    for it = 1:T
+        r  = r0 - (1 - 1/D) * r0 * it / T;
         g1 = F.gradient(x1,it); % 计算梯度
-        y1 = F.object(x1,it); % 计算目标函数值
-        ng1 = norm(g1); % 计算梯度模
-        disp(sprintf('迭代次数:%d 学习速度:%f 目标函数:%f 梯度模:%f ',it,r,y1,ng1));
-        if ng1 < parameters.epsilon
-            break; % 如果梯度足够小就结束迭代
-        end
         inc_x = m * inc_x - (1 - m) * r * g1; % 向负梯度方向迭代，并使用动量参数
         x1 = x1 + inc_x; % 更新参数值
+        y1 = F.object(x1,it); % 计算目标函数值
+        z(1+mod(it,W)) = y1;
+        az = mean(z);
+        disp(sprintf('迭代次数:%d 学习速度:%f 函数均值:%f',it,r,az));
+        if mod(it,W) == 0
+            if az < azx
+                azx = az;
+            else
+                break;
+            end
+        end
     end
     
     %% 返回

@@ -160,7 +160,8 @@ classdef PerceptionL
                     0.01 * randn(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]')); % 将权值初始化为0附近的随机数
                 obj.weight(obj.star_b_idx{m}:obj.stop_b_idx{m},1) = ...
                     zeros(size([obj.star_b_idx{m}:obj.stop_b_idx{m}]')); % 将偏置值初始化为0
-                %obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m},1) = 0.1 * ones(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]'));
+                
+                % obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m},1) = 0.1 * ones(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]'));
             end
         end
         
@@ -221,6 +222,10 @@ classdef PerceptionL
                 obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
             elseif strcmp(parameters.algorithm,'ADAM')
                 obj.weight = learn.optimal.minimize_adam(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'SGD')
+                obj.weight = learn.optimal.minimize_sgd(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'GD')
+                obj.weight = learn.optimal.minimize_g(obj,obj.weight,parameters);
             end
             
             %% 解除绑定
@@ -269,7 +274,7 @@ classdef PerceptionL
             
             N = 2000;
             x = linspace(-2,2,N);
-            k = 4;
+            k = 1;
             f = @(x)sin(k * pi * x / 4);
             l = f(x);
             
@@ -281,8 +286,13 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            paramters.algorithm = 'ADAM';
-            p = p.train(reshape(x,1,20,100),reshape(l,1,20,100),paramters);
+            parameters.algorithm = 'ADAM';
+            % parameters.algorithm = 'SGD';
+            % parameters.algorithm = 'GD';
+            parameters.learn_rate = 1e-3;
+            parameters.window = 1e5;
+            parameters.decay = 8;
+            p = p.train(reshape(x,1,20,100),reshape(l,1,20,100),parameters);
             
             figure(3);
             y = p.do(x);
@@ -297,8 +307,8 @@ classdef PerceptionL
             close all;
             rng(1);
             
-            x = [0.8 0.2];
-            l = [0.2 0.8];
+            x = [0.8];
+            l = [0.2];
             
             configure = [1,2,1];
             p = learn.neural.PerceptionL(configure);
@@ -308,7 +318,7 @@ classdef PerceptionL
             plot(x,l); hold on;
             plot(x,p.do(x)); hold off;
             
-            parameters.epsilon = 1e-6;
+            parameters.algorithm = 'GD';
             p = p.train(x,l,parameters);
             
             figure(3);
