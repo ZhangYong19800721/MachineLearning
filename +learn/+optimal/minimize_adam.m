@@ -64,7 +64,7 @@ function [x,y] = minimize_adam(F,x0,parameters)
     y1 = F.object(x1,0); % 计算目标函数值
     
     %% 开始迭代
-    z = y1 * ones(1,W); azx = inf; 
+    z = 100 * y1; k = inf; 
     for it = 1:T
         r  = r0 * exp(-D*it/T); 
         g1 = F.gradient(x1,it); % 计算梯度
@@ -74,13 +74,12 @@ function [x,y] = minimize_adam(F,x0,parameters)
         vb  = v / (1 - beda2^it); % 对第2个增量向量进行修正
         x2 = x1 - r * mb ./ (sqrt(vb) + epsilon);
         y2 = F.object(x2,it); % 计算目标函数值
-        z(1+mod(it,W)) = y2;
-        az = mean(z);
-        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f',it,r,az));
+        z = (1-1/W)*z + (1/W)*y2;
+        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f',it,r,z));
         x1 = x2; y1 = y2;
         if mod(it,W) == 0
-            if az < azx
-                azx = az;
+            if z < k
+                k = z;
             else
                 break;
             end
