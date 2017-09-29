@@ -50,7 +50,7 @@ function [x,y] = minimize_sgd(F,x0,parameters)
     y1 = F.object(x1,0); % 计算目标函数值
     
     %% 开始迭代
-    z = 100 * y1; k = inf; 
+    z = y1; k = inf; 
     for it = 1:T
         r  = r0 - (1 - 1/D) * r0 * it / T;
         g1 = F.gradient(x1,it); % 计算梯度
