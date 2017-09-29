@@ -103,6 +103,22 @@ classdef PerceptionS
                     zeros(size([obj.star_b_idx{m}:obj.stop_b_idx{m}]')); % 将偏置值初始化为0
             end
         end
+		
+		function y = compute(obj,x,L)
+            % 多层感知器的计算过程
+            % y 是最后的输出
+            
+            if nargin <= 2
+                L = length(obj.num_hidden); % 得到层数
+            end
+            
+            for l = 1:L
+                w = obj.getw(l);
+                b = obj.getb(l);
+                y = learn.tools.sigmoid(w * x + repmat(b,1,size(x,2)));
+                x = y;
+            end
+        end
         
         function [y,a] = do(obj,x,L)
             % 多层感知器的计算过程
@@ -155,6 +171,12 @@ classdef PerceptionS
                 obj.weight = learn.optimal.minimize_bfgs(obj,obj.weight,parameters);
             elseif strcmp(parameters.algorithm,'LM')
                 obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
+			elseif strcmp(parameters.algorithm,'ADAM')
+                obj.weight = learn.optimal.minimize_adam(obj,obj.weight,parameters);
+			elseif strcmp(parameters.algorithm,'SGD')
+                obj.weight = learn.optimal.minimize_sgd(obj,obj.weight,parameters);
+			elseif strcmp(parameters.algorithm,'GD')
+                obj.weight = learn.optimal.minimize_g(obj,obj.weight,parameters);
             end
             
             %% 解除绑定
