@@ -26,10 +26,11 @@ clear parameters;
 parameters.learn_rate_max = 1e-1;
 parameters.learn_rate_min = 1e-5;
 parameters.momentum = 0.9;
-parameters.max_it = M*100;
+parameters.max_it = 0; % M*100;
 parameters.case = 2; % 无抽样的情况
 sae = sae.train(data,parameters);
-save('sae_trained.mat','sae');
+%save('sae_trained.mat','sae');
+load('sae_trained.mat');
 
 data = reshape(data,D,[]);
 recon_data = sae.rebuild(data,'nosample');
