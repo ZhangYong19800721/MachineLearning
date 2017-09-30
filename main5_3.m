@@ -8,7 +8,7 @@ load('thresh.mat');
 
 code = sae.encode(points,'nosample');
 code = code > repmat(thresh,1,size(code,2));
-query_id = 2102;
+query_id = 2156;
 query_code = code(:,query_id);
 query_code = repmat(query_code,1,N);
 match_idx = sum(xor(query_code,code)) <= 0;

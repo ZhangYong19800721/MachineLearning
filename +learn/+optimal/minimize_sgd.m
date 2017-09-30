@@ -58,7 +58,7 @@ function [x,y] = minimize_sgd(F,x0,parameters)
         x1 = x1 + inc_x; % 更新参数值
         y1 = F.object(x1,it); % 计算目标函数值
         z = (1-1/W)*z + (1/W)*y1;
-        disp(sprintf('迭代次数:%d 学习速度:%f 函数均值:%f',it,r,z));
+        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f 目标函数:%f',it,r,z,y1));
         if mod(it,W) == 0
             if z < k
                 k = z;
