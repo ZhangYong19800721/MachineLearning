@@ -1,5 +1,5 @@
-function [x,y] = minimize_adam(F,x0,parameters)
-%minimize_adam ADAM 梯度下降
+function [x,y] = minimize_sadam(F,x0,parameters)
+%minimize_adam Stochastic ADAM 随机梯度下降
 %   参考文献“ADAM:A Method For Stochastic Optimization”,2014
 %   输入：
 %       F 调用F.gradient(x,i)计算目标函数的梯度，调用F.object(x,i)计算目标函数的值，其中i指示minibatch
@@ -20,9 +20,9 @@ function [x,y] = minimize_adam(F,x0,parameters)
         disp(sprintf('没有epsilon参数，将使用默认值%f',parameters.epsilon));
     end
     
-    if ~isfield(parameters,'omiga') % 给出参数但是没有给出omiga
-        parameters.omiga = 1e-3; 
-        disp(sprintf('没有window参数，将使用默认值%f',parameters.omiga));
+    if ~isfield(parameters,'window') % 给出参数但是没有给出window
+        parameters.window = 1e+3; 
+        disp(sprintf('没有window参数，将使用默认值%f',parameters.window));
     end
     
     if ~isfield(parameters,'max_it') % 给出参数但是没有给出max_it
@@ -52,7 +52,7 @@ function [x,y] = minimize_adam(F,x0,parameters)
     
     %% 初始化
     T = parameters.max_it;
-    O = parameters.omiga;
+    W = parameters.window;
     beda1 = parameters.beda1;
     beda2 = parameters.beda2;
     r0 = parameters.learn_rate;
@@ -61,23 +61,28 @@ function [x,y] = minimize_adam(F,x0,parameters)
     m = 0; % 初始化第一个递增向量
     v = 0; % 初始化第二个递增向量
     x1 = x0;  % 起始点
-    y1 = F.object(x1); % 计算目标函数值
+    y1 = F.object(x1,0); % 计算目标函数值
     
     %% 开始迭代
+    z = y1; k = inf; 
     for it = 1:T
         r  = r0 * exp(-D*it/T); 
-        g1 = F.gradient(x1); % 计算梯度
+        g1 = F.gradient(x1,it); % 计算梯度
         m  = beda1 * m + (1 - beda1) * g1;    % 更新第1个增量向量
         v  = beda2 * v + (1 - beda2) * g1.^2; % 更新第2个增量向量
         mb  = m / (1 - beda1^it); % 对第1个增量向量进行修正
         vb  = v / (1 - beda2^it); % 对第2个增量向量进行修正
         x2 = x1 - r * mb ./ (sqrt(vb) + epsilon);
-        y2 = F.object(x2); % 计算目标函数值
-        ng1 = norm(g1);
-        disp(sprintf('迭代次数:%d 学习速度:%f 目标函数:%f 梯度模:%f',it,r,y1,ng1));
+        y2 = F.object(x2,it); % 计算目标函数值
+        z = (1-1/W)*z + (1/W)*y2;
+        disp(sprintf('迭代次数:%d 学习速度:%f 目标均值:%f 目标函数:%f',it,r,z,y2));
         x1 = x2; y1 = y2;
-        if ng1 < O
-            break;
+        if mod(it,W) == 0
+            if z < k
+                k = z;
+            else
+                break;
+            end
         end
     end
     

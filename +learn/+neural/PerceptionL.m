@@ -274,7 +274,7 @@ classdef PerceptionL
             
             N = 2000;
             x = linspace(-2,2,N);
-            k = 1;
+            k = 4;
             f = @(x)sin(k * pi * x / 4);
             l = f(x);
             
@@ -290,9 +290,9 @@ classdef PerceptionL
             % parameters.algorithm = 'SGD';
             % parameters.algorithm = 'GD';
             parameters.learn_rate = 1e-3;
-            parameters.window = 1e5;
-            parameters.decay = 8;
-            p = p.train(reshape(x,1,20,100),reshape(l,1,20,100),parameters);
+            parameters.window = 1e4;
+            parameters.decay = 2;
+            p = p.train(x,l,parameters);
             
             figure(3);
             y = p.do(x);
