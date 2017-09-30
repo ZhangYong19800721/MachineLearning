@@ -215,7 +215,7 @@ classdef PerceptionS
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
+            plot(x,p.compute(x)); hold off;
             
             paramters.algorithm = 'BFGS';
             % paramters.algorithm = 'CG';
@@ -224,7 +224,7 @@ classdef PerceptionS
             p = p.train(x,l,paramters);
             
             figure(3);
-            y = p.do(x);
+            y = p.compute(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             
@@ -245,13 +245,13 @@ classdef PerceptionS
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
+            plot(x,p.compute(x)); hold off;
             
             parameters.epsilon = 1e-8;
             p = p.train(x,l,parameters);
             
             figure(3);
-            y = p.do(x);
+            y = p.compute(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             

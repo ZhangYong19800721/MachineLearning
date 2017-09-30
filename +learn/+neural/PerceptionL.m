@@ -101,7 +101,7 @@ classdef PerceptionL
                 minilabel = obj.labels(:,:,m); % 取一个minibatch
                 
                 %% 计算目标函数
-                z = obj.do(minibatch);
+                z = obj.compute(minibatch);
                 y = sum(sum((minilabel - z).^2));
             end
         end
@@ -162,6 +162,26 @@ classdef PerceptionL
                     zeros(size([obj.star_b_idx{m}:obj.stop_b_idx{m}]')); % 将偏置值初始化为0
                 
                 % obj.weight(obj.star_w_idx{m}:obj.stop_w_idx{m},1) = 0.1 * ones(size([obj.star_w_idx{m}:obj.stop_w_idx{m}]'));
+            end
+        end
+        
+        function y = compute(obj,x,L)
+            % 多层感知器的计算过程
+            % y 是最后的输出
+            
+            if nargin <= 2
+                L = length(obj.num_hidden); % 得到层数
+            end
+           
+            for l = 1:L
+                w = obj.getw(l);
+                b = obj.getb(l);
+                n = w * x + repmat(b,1,size(x,2));
+                if l < L
+                    x = learn.tools.sigmoid(n);
+                else
+                    y = n;
+                end
             end
         end
         
@@ -252,7 +272,7 @@ classdef PerceptionL
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
+            plot(x,p.compute(x)); hold off;
             
             % paramters.algorithm = 'LM';
             % paramters.algorithm = 'BFGS';
@@ -260,7 +280,7 @@ classdef PerceptionL
             p = p.train(x,l,paramters);
             
             figure(3);
-            y = p.do(x);
+            y = p.compute(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             
@@ -284,7 +304,7 @@ classdef PerceptionL
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
+            plot(x,p.compute(x)); hold off;
             
             parameters.algorithm = 'ADAM';
             % parameters.algorithm = 'SGD';
@@ -295,7 +315,7 @@ classdef PerceptionL
             p = p.train(x,l,parameters);
             
             figure(3);
-            y = p.do(x);
+            y = p.compute(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             
@@ -316,13 +336,13 @@ classdef PerceptionL
             
             figure(1);
             plot(x,l); hold on;
-            plot(x,p.do(x)); hold off;
+            plot(x,p.compute(x)); hold off;
             
             parameters.algorithm = 'GD';
             p = p.train(x,l,parameters);
             
             figure(3);
-            y = p.do(x);
+            y = p.compute(x);
             plot(x,l,'b'); hold on;
             plot(x,y,'r.'); hold off;
             
