@@ -185,6 +185,8 @@ classdef PerceptionS
                 obj.weight = learn.optimal.minimize_lm(obj,obj.weight,parameters);
 			elseif strcmp(parameters.algorithm,'ADAM')
                 obj.weight = learn.optimal.minimize_adam(obj,obj.weight,parameters);
+            elseif strcmp(parameters.algorithm,'SADAM')
+                obj.weight = learn.optimal.minimize_sadam(obj,obj.weight,parameters);
 			elseif strcmp(parameters.algorithm,'SGD')
                 obj.weight = learn.optimal.minimize_sgd(obj,obj.weight,parameters);
 			elseif strcmp(parameters.algorithm,'GD')
