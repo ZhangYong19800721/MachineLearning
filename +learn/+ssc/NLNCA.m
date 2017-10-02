@@ -31,22 +31,34 @@ classdef NLNCA < learn.neural.PerceptionS
             point_z = obj.points(:,obj.difset{a}); % 取不同点集
             
             %% 计算实数编码
-            code_a = obj.encode(point_a);
-            code_b = obj.encode(point_b);
-            code_z = obj.encode(point_z);
+            [y_a,f_a] = obj.do(point_a); f_a = f_a{obj.co_idx};
+            [y_b,f_b] = obj.do(point_b); f_b = f_b{obj.co_idx};
+            [y_z,f_z] = obj.do(point_z); f_z = f_z{obj.co_idx};
+            f_ab = repmat(f_a,1,size(f_b,2)) - f_b;
+            f_az = repmat(f_a,1,size(f_z,2)) - f_z; 
             
             %% a点到其他所有点的距离
-            dis_ab = sum((code_b - repmat(code_a,1,size(code_b,2))).^2,1); 
-            dis_az = sum((code_z - repmat(code_a,1,size(code_z,2))).^2,1); 
+            dis_ab = sum(f_ab.^2,1); 
+            dis_az = sum(f_az.^2,1); 
             exp_ab = exp(-dis_ab); % a点到相似点距离的负指数函数
             exp_az = exp(-dis_az); % a点到不同点距离的负指数函数
             sum_ex = sum([exp_ab exp_az]);
             
             %% a点到相似点的概率
             p_ab = exp_ab / sum_ex;
+            p_a = sum(p_ab); % a点到相似点的概率和
+            
+            %% 计算交叉熵
+            y_a(y_a<=0) = eps; y_a(y_a>=1) = 1 - eps;
+            y_b(y_b<=0) = eps; y_b(y_b>=1) = 1 - eps;
+            y_z(y_z<=0) = eps; y_z(y_z>=1) = 1 - eps;
+            e_a = point_a * log(y_a) + (1-point_a) * log(1-y_a);
+            e_b = point_b * log(y_b) + (1-point_b) * log(1-y_b);
+            e_z = point_z * log(y_z) + (1-point_z) * log(1-y_z);
+            e = -e_a-e_b-e_z;
             
             %% 计算目标函数
-            y = obj.lamdax * sum(p_ab) + (1 - obj.lamdax) * cross_entropy;
+            y = obj.lamdax * p_a + (1 - obj.lamdax) * e;
         end
         
         %% 计算梯度
@@ -58,9 +70,9 @@ classdef NLNCA < learn.neural.PerceptionS
             point_z = obj.points(:,obj.difset{a}); % 取不同点集
             
             %% 计算实数编码
-            f_a = obj.encode(point_a);
-            f_b = obj.encode(point_b);
-            f_z = obj.encode(point_z);
+            f_a = obj.compute(point_a,obj.co_idx);
+            f_b = obj.compute(point_b,obj.co_idx);
+            f_z = obj.compute(point_z,obj.co_idx);
             f_ab = repmat(f_a,1,size(f_b,2)) - f_b;
             f_az = repmat(f_a,1,size(f_z,2)) - f_z;
             
