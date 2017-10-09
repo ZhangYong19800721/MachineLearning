@@ -35,7 +35,7 @@ classdef NLNCA < learn.neural.PerceptionS
             [y_b,f_b] = obj.do(point_b); f_b = f_b{obj.co_idx};
             [y_z,f_z] = obj.do(point_z); f_z = f_z{obj.co_idx};
             f_ab = repmat(f_a,1,size(f_b,2)) - f_b;
-            f_az = repmat(f_a,1,size(f_z,2)) - f_z; 
+            f_az = repmat(f_a,1,size(f_z,2)) - f_z;
             
             %% a点到其他所有点的距离
             dis_ab = sum(f_ab.^2,1); 
@@ -58,21 +58,30 @@ classdef NLNCA < learn.neural.PerceptionS
             e = -e_a-e_b-e_z;
             
             %% 计算目标函数
-            y = obj.lamdax * p_a + (1 - obj.lamdax) * e;
+            % y = obj.lamdax * p_a + (1 - obj.lamdax) * e;
+            y = p_a;
         end
         
         %% 计算梯度
         function g = gradient(obj,x,a)
             %% 初始化
             obj.weight = x; % 首先设置参数
+            g = zeros(size(obj.weight,1),1); % 梯度
             point_a = obj.points(:,a); % 取第a个点
             point_b = obj.points(:,obj.simset{a}); % 取相似点集
             point_z = obj.points(:,obj.difset{a}); % 取不同点集
+            s = cell(1,L); % 敏感性
+            w = cell(1,L); iw = cell(1,L); % 权值
+            b = cell(1,L); ib = cell(1,L); % 偏置
+            for l = 1:L % 取得每一层的权值和偏置值
+                [w{l},iw{l}] = obj.getw(l);
+                [b{l},ib{l}] = obj.getb(l);
+            end
             
             %% 计算实数编码
-            f_a = obj.compute(point_a,obj.co_idx);
-            f_b = obj.compute(point_b,obj.co_idx);
-            f_z = obj.compute(point_z,obj.co_idx);
+            [~,f_a] = obj.do(point_a); f_a = f_a{obj.co_idx};
+            [~,f_b] = obj.do(point_b); f_b = f_b{obj.co_idx};
+            [~,f_z] = obj.do(point_z); f_z = f_z{obj.co_idx};
             f_ab = repmat(f_a,1,size(f_b,2)) - f_b;
             f_az = repmat(f_a,1,size(f_z,2)) - f_z;
             
@@ -92,14 +101,38 @@ classdef NLNCA < learn.neural.PerceptionS
             s_a = f_a.*(1-f_a);
             s_b = f_b.*(1-f_b);
             s_z = f_z.*(1-f_z);
-            
             s_ab = repmat(s_a,1,size(s_b,2)) - s_b;
             s_az = repmat(s_a,1,size(s_z,2)) - s_z;
-            
             s1 = sum(repmat(p_az,size(f_az,1),1) * 2 * f_az .* s_az,2);
             s2 = sum(repmat(p_ab,size(f_ab,1),1) * 2 * f_ab .* s_ab,2);
+            s{obj.co_idx} = p_a * (s1+s2) - s2;
             
-            s = p_a * (s1+s2) - s2;
+            %% 反向传播敏感性
+            for l = L:-1:1  
+                if l < obj.co_idx
+                    s{l} = (s{l+1} * w{l+1}) .* (a{l}.*(1-a{l}))';
+                elseif l > obj.co_idx
+                    H = obj.num_hidden{l};
+                    s{l} = zeros(1,H);
+                end
+            end
+            
+            for l = 1:L
+                H = obj.num_hidden{l};
+                V = obj.num_visual{l};
+                if l == 1
+                    minibatch = [point_a point_b point_z];
+                    gx = reshape(repmat(s{l}',V,1),H,V,S) .* reshape(repelem(minibatch,H,1),H,V,S);
+                elseif l <= obj.co_idx
+                    minibatch = [f_a{l-1} f_b{l-1} f_z{l-1}];
+                    gx = reshape(repmat(s{l}',V,1),H,V,S) .* reshape(repelem(minibatch,H,1),H,V,S);     
+                else
+                    gx = zeros(H,V);
+                end
+                gx = sum(gx,3);
+                g(iw{l},1) = g(iw{l},1) + gx(:);
+                g(ib{l},1) = g(ib{l},1) + sum(s{l},1)';
+            end
         end
         
         %% 编码
