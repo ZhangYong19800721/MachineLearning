@@ -3,12 +3,12 @@ close all;
 rng(1);
 
 load('images.mat'); points = double(points)/255; N = size(points,2);
-load('sae_trained.mat');
+load('ps.mat');
 load('thresh.mat');
 
-code = sae.encode(points,'nosample');
+code = ps.compute(points,3);
 code = code > repmat(thresh,1,size(code,2));
-query_id = 2156;
+query_id = 2002;
 query_code = code(:,query_id);
 query_code = repmat(query_code,1,N);
 match_idx = sum(xor(query_code,code)) <= 0;
@@ -19,7 +19,12 @@ match = seq(match_idx);
 k = 0;
 for n = match
     k = k + 1
-    file = strcat(strcat(dir,sprintf('%09d',n-1)),'.jpg');
-    image = imread(file);
-    imshow(imresize(image,0.2));
+    fileQ = strcat(strcat(dir,sprintf('%09d',query_id-1)),'.jpg');
+    fileK = strcat(strcat(dir,sprintf('%09d',n-1))       ,'.jpg');
+    imageQ = imread(fileQ);
+    imageK = imread(fileK);
+    subplot(2,1,1);
+    imshow(imresize(imageQ,0.2));
+    subplot(2,1,2);
+    imshow(imresize(imageK,0.2));
 end

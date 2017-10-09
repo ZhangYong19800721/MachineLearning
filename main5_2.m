@@ -4,10 +4,10 @@ close all
 load('tiny_images.mat'); 
 [D,S,M] = size(points);
 points = double(points)/255;
-load('sae_trained.mat')
+load('ps.mat')
 
 points = reshape(points,D,[]);
-code = sae.encode(points,'nosample');
+code = ps.compute(points,3);
 thresh = zeros(64,1);
 
 for n = 1:64

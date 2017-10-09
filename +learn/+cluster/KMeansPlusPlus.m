@@ -22,7 +22,11 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
         distance_matrix(c,:) = sum(delta.^2,1);
      
         min_distance_matrix = min(distance_matrix);
-        prob = min_distance_matrix ./ sum(min_distance_matrix);
+        if sum(min_distance_matrix) == 0
+            prob = ones(size(min_distance_matrix)) ./ N;
+        else
+            prob = min_distance_matrix ./ sum(min_distance_matrix);
+        end
         cprob = [0 cumsum(prob)];
         idx = sum(cprob < rand());
         while sum(center_points_idx==idx) > 0 % 表示在center_points_init_idx集合中能找到idx
@@ -45,7 +49,11 @@ function [center_points, labels]=KMeansPlusPlus(points,K)
         
         old_center_points = center_points;
         parfor k = 1:K
-            center_points(:,k) = sum(points(:,min_idx == k),2) / sum(min_idx == k);
+            if(sum(min_idx == k) == 0)
+                center_points(:,k) = old_center_points(:,k);
+            else
+                center_points(:,k) = sum(points(:,min_idx == k),2) / sum(min_idx == k);
+            end
         end
         
         norm_value = norm(old_center_points - center_points);

@@ -22,14 +22,16 @@ end
 
 ps.weight = weight;
 
-parameters.algorithm = 'ADAM';
+parameters.algorithm = 'SADAM';
 parameters.learn_rate = 1e-3;
 parameters.window = 1e4;
 parameters.decay = 6;
+parameters.max_it = 0;
 ps = ps.train(data,data,parameters);
+load('ps.mat');
 
 data = reshape(data,D,[]);
 recon_data = ps.compute(data);
 train_error = sum(sum((recon_data - data).^2)) / N;
 disp(sprintf('finetune-error:%f',train_error));
-save('ps.mat','ps');
+% save('ps.mat','ps');

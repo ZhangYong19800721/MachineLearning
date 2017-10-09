@@ -20,6 +20,7 @@ data = reshape(data,D,[]);
 recon_data = sae.rebuild(data,'nosample');
 pretrain_error = sum(sum((recon_data - data).^2)) / N;
 disp(sprintf('pretrained-error:%f',pretrain_error));
+clear recon_data;
 
 data = reshape(data,D,S,M);
 clear parameters;
@@ -36,3 +37,4 @@ data = reshape(data,D,[]);
 recon_data = sae.rebuild(data,'nosample');
 train_error = sum(sum((recon_data - data).^2)) / N;
 disp(sprintf('trained-error:%f',train_error));
+clear recon_data;
