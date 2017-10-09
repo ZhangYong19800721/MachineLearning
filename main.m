@@ -47,10 +47,10 @@ ps.weight = weight;
 
 rebuild_data = ps.compute(data);
 train_error2 = sum(sum((rebuild_data - data).^2)) / N;
-disp(sprintf('train-error:%f',train_error2));
+disp(sprintf('train-error2:%f',train_error2));
 
 clear parameters;
-parameters.algorithm = 'ADAM';
+parameters.algorithm = 'SADAM';
 parameters.learn_rate = 1e-3;
 parameters.window = 1e4;
 parameters.decay = 8;

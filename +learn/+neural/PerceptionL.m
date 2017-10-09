@@ -218,6 +218,16 @@ classdef PerceptionL
             b = reshape(obj.weight(r),[],1);
         end
         
+        function obj = setw(obj,w,m)
+            r = obj.star_w_idx{m}:obj.stop_w_idx{m};
+            obj.weight(r) = w(:);
+        end
+        
+        function obj = setb(obj,b,m)
+            r = obj.star_b_idx{m}:obj.stop_b_idx{m};
+            obj.weight(r) = b(:);
+        end
+        
         function obj = train(obj,points,labels,parameters)
             if nargin <= 3
                 parameters = [];

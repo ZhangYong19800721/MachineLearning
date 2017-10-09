@@ -26,9 +26,9 @@ classdef NLNCA < learn.neural.PerceptionS
             obj.weight = x; % 首先设置参数
             N = size(obj.points,2); 
             a = 1+mod(a,N);
-            point_a = obj.points(:,a); % 取第a个点
-            point_b = obj.points(:,obj.simset{a}); % 取相似点集
-            point_z = obj.points(:,obj.difset{a}); % 取不同点集
+            point_a = obj.points(:,a); Na = 1; % 取第a个点
+            point_b = obj.points(:,obj.simset{a}); Nb = numel(obj.simset{a}); % 取相似点集
+            point_z = obj.points(:,obj.difset{a}); Nz = numel(obj.difset{a}); % 取不同点集
             
             %% 计算实数编码
             [y_a,f_a] = obj.do(point_a); f_a = f_a{obj.co_idx};
@@ -52,13 +52,13 @@ classdef NLNCA < learn.neural.PerceptionS
             y_a(y_a<=0) = eps; y_a(y_a>=1) = 1 - eps;
             y_b(y_b<=0) = eps; y_b(y_b>=1) = 1 - eps;
             y_z(y_z<=0) = eps; y_z(y_z>=1) = 1 - eps;
-            e_a = point_a * log(y_a) + (1-point_a) * log(1-y_a);
-            e_b = point_b * log(y_b) + (1-point_b) * log(1-y_b);
-            e_z = point_z * log(y_z) + (1-point_z) * log(1-y_z);
-            e = -e_a-e_b-e_z;
+            e_a = point_a .* log(y_a) + (1-point_a) .* log(1-y_a);
+            e_b = point_b .* log(y_b) + (1-point_b) .* log(1-y_b);
+            e_z = point_z .* log(y_z) + (1-point_z) .* log(1-y_z);
+            c_e = -sum(sum([e_a e_b e_z])) / (Na+Nb+Nz);
             
             %% 计算目标函数
-            % y = obj.lamdax * p_a + (1 - obj.lamdax) * e;
+            % y = obj.lamdax * p_a + (1 - obj.lamdax) * c_e;
             y = p_a;
         end
         
@@ -66,6 +66,7 @@ classdef NLNCA < learn.neural.PerceptionS
         function g = gradient(obj,x,a)
             %% 初始化
             obj.weight = x; % 首先设置参数
+            L = length(obj.num_hidden); % L层数
             g = zeros(size(obj.weight,1),1); % 梯度
             point_a = obj.points(:,a); % 取第a个点
             point_b = obj.points(:,obj.simset{a}); % 取相似点集
@@ -79,15 +80,15 @@ classdef NLNCA < learn.neural.PerceptionS
             end
             
             %% 计算实数编码
-            [~,f_a] = obj.do(point_a); f_a = f_a{obj.co_idx};
-            [~,f_b] = obj.do(point_b); f_b = f_b{obj.co_idx};
-            [~,f_z] = obj.do(point_z); f_z = f_z{obj.co_idx};
-            f_ab = repmat(f_a,1,size(f_b,2)) - f_b;
-            f_az = repmat(f_a,1,size(f_z,2)) - f_z;
+            [~,f_a] = obj.do(point_a); c_a = f_a{obj.co_idx};
+            [~,f_b] = obj.do(point_b); c_b = f_b{obj.co_idx};
+            [~,f_z] = obj.do(point_z); c_z = f_z{obj.co_idx};
+            c_ab = repmat(c_a,1,size(c_b,2)) - c_b;
+            c_az = repmat(c_a,1,size(c_z,2)) - c_z;
             
             %% a点到其他所有点的距离
-            dis_ab = sum(f_ab.^2,1); 
-            dis_az = sum(f_az.^2,1); 
+            dis_ab = sum(c_ab.^2,1); 
+            dis_az = sum(c_az.^2,1); 
             exp_ab = exp(-dis_ab); % a点到相似点距离的负指数函数
             exp_az = exp(-dis_az); % a点到不同点距离的负指数函数
             sum_ex = sum([exp_ab exp_az]);
@@ -98,13 +99,13 @@ classdef NLNCA < learn.neural.PerceptionS
             p_a  = sum(p_ab); % a点到相似点的概率和
             
             %% 计算顶层的敏感性
-            s_a = f_a.*(1-f_a);
-            s_b = f_b.*(1-f_b);
-            s_z = f_z.*(1-f_z);
+            s_a = c_a .* (1-c_a);
+            s_b = c_b .* (1-c_b);
+            s_z = c_z .* (1-c_z);
             s_ab = repmat(s_a,1,size(s_b,2)) - s_b;
             s_az = repmat(s_a,1,size(s_z,2)) - s_z;
-            s1 = sum(repmat(p_az,size(f_az,1),1) * 2 * f_az .* s_az,2);
-            s2 = sum(repmat(p_ab,size(f_ab,1),1) * 2 * f_ab .* s_ab,2);
+            s1 = sum(repmat(p_az,size(c_az,1),1) .* (2 * c_az .* s_az),2);
+            s2 = sum(repmat(p_ab,size(c_ab,1),1) .* (2 * c_ab .* s_ab),2);
             s{obj.co_idx} = p_a * (s1+s2) - s2;
             
             %% 反向传播敏感性
@@ -186,20 +187,22 @@ classdef NLNCA < learn.neural.PerceptionS
             %% 计算相似集合
             [~,N] = size(points);
             I = labels_pos(1,:); J = labels_pos(2,:);
-            for n = 1:N
+            parfor n = 1:N
                 idx = (J == n | I == n);
-                obj.simset{n} = setdiff(union(I(idx),J(idx)),n);
+                simset{n} = setdiff(union(I(idx),J(idx)),n);
             end
+            obj.simset = simset;
             
             %% 计算不同集合
             I = labels_neg(1,:); J = labels_neg(2,:);
-            for n = 1:N
+            parfor n = 1:N
                 idx = (J == n | I == n);
-                obj.difset{n} = setdiff(union(I(idx),J(idx)),n);
+                difset{n} = setdiff(union(I(idx),J(idx)),n);
             end
+            obj.difset = difset;
             
             %% 寻优
-            obj.weight = learn.optimal.minimize_sadam(obj,obj.weight,parameters);
+            obj.weight = learn.optimal.maximize_sadam(obj,obj.weight,parameters);
             
             %% 解除绑定
             obj.points = [];
@@ -215,7 +218,8 @@ classdef NLNCA < learn.neural.PerceptionS
             
             load('images.mat'); points = points(1:(32*32),:); points = double(points) / 255;
             load('labels_pos.mat');
-            load('labels_neg.mat'); labels = [labels_pos labels_neg];
+            load('labels_neg.mat'); 
+            labels = [labels_pos labels_neg];
             
             configure = [1024,500,64,500,1024];
             nca = learn.ssc.NLNCA(configure,2,0.99);

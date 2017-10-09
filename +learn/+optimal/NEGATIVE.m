@@ -11,20 +11,20 @@ classdef NEGATIVE
             obj.F = F;
         end
         
-        function y = object(obj,x)
-            y = -obj.F.object(x);
+        function y = object(obj,x,m)
+            y = -obj.F.object(x,m);
         end
         
-        function g = gradient(obj,x)
-            g = -obj.F.gradient(x);
+        function g = gradient(obj,x,m)
+            g = -obj.F.gradient(x,m);
         end
         
-        function v = vector(obj,x)
-            v = -obj.F.vector(x);
+        function v = vector(obj,x,m)
+            v = -obj.F.vector(x,m);
         end
         
-        function j = jacobi(obj,x)
-            j = -obj.F.jacobi(x);
+        function j = jacobi(obj,x,m)
+            j = -obj.F.jacobi(x,m);
         end
     end
     
